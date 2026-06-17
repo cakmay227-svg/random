@@ -1,0 +1,57 @@
+-- ===== TEST SCRIPT BROKEN =====
+
+local Players = game:GetService("Players"
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+local function createUI()
+    local gui = Instance.new("ScreenGui"
+    gui.Parent = player:WaitForChild("PlayerGui")
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.Parent = gui
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 200, 0, 50)
+    label.Position = UDim2.new(0.5, -100, 0.5, -25)
+    label.Text = "HELLO DEBUG"
+    label.Parent = frame
+
+    return gui
+end
+
+local function spawnLoop()
+    for i = 1, 10 do
+        task.spawn(function()
+            local part = Instance.new("Part")
+            part.Size = Vector3.new(2,2,2)
+            part.Position = Vector3.new(math.random(0,50), 10, math.random(0,50))
+            part.Parent = workspace
+
+            part.Touched:Connect(function(hit)
+                local hum = hit.Parent:FindFirstChild("Humanoid")
+                if hum then
+                    hum.Health = hum.Health - 10
+                end
+            end
+
+        end)
+    end
+end
+
+local function brokenMath()
+    local a = 10
+    local b = nil
+
+    print(a + b) -- runtime error
+end
+
+local function main()
+    createUI()
+    spawnLoop()
+    brokenMath()
+
+main() -- thiếu end
