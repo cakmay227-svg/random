@@ -1,0 +1,838 @@
+-- ===== 💀 MAX DEBUG ENGINE v8 ULTRA (V5 FORMAT + MULTI ERROR + EXPLAIN) =====
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
+
+-- ===== COPY =====
+local function copy(text)
+	if setclipboard then
+		setclipboard(text)
+	elseif toclipboard then
+		toclipboard(text)
+	end
+end
+
+-- ===== UI =====
+local gui = Instance.new("ScreenGui")
+gui.Name = "MAX_DEBUG_UI"
+gui.ResetOnSpawn = false
+gui.Parent = PlayerGui
+
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, 340, 0, 280)
+main.Position = UDim2.new(0.5, -170, 0.5, -140)
+main.BackgroundColor3 = Color3.fromRGB(10,10,10)
+main.BorderSizePixel = 0
+main.Parent = gui
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0,26)
+title.BackgroundTransparency = 1
+title.Text = "💀 MAX DEBUG ENGINE v8 ULTRA"
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+title.Parent = main
+
+-- INPUT
+local inputFrame = Instance.new("ScrollingFrame")
+inputFrame.Size = UDim2.new(0.95,0,0,95)
+inputFrame.Position = UDim2.new(0.025,0,0,28)
+inputFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+inputFrame.ScrollBarThickness = 4
+inputFrame.CanvasSize = UDim2.new(0,0,3,0)
+inputFrame.Parent = main
+Instance.new("UICorner", inputFrame)
+
+local input = Instance.new("TextBox")
+input.Size = UDim2.new(1,-6,0,300)
+input.Position = UDim2.new(0,3,0,0)
+input.BackgroundTransparency = 1
+input.TextColor3 = Color3.fromRGB(255,255,255)
+input.MultiLine = true
+input.TextXAlignment = Enum.TextXAlignment.Left
+input.TextYAlignment = Enum.TextYAlignment.Top
+input.Font = Enum.Font.Code
+input.TextSize = 13
+input.TextWrapped = true
+input.PlaceholderText = "Enter script / raw / link"
+input.Parent = inputFrame
+
+-- OUTPUT
+local outputFrame = Instance.new("ScrollingFrame")
+outputFrame.Size = UDim2.new(0.95,0,0,125)
+outputFrame.Position = UDim2.new(0.025,0,0,130)
+outputFrame.BackgroundColor3 = Color3.fromRGB(15,15,15)
+outputFrame.ScrollBarThickness = 4
+outputFrame.CanvasSize = UDim2.new(0,0,8,0)
+outputFrame.Parent = main
+Instance.new("UICorner", outputFrame)
+
+local output = Instance.new("TextLabel")
+output.Size = UDim2.new(1,-6,0,800)
+output.Position = UDim2.new(0,3,0,0)
+output.BackgroundTransparency = 1
+output.TextColor3 = Color3.fromRGB(255,255,255)
+output.Font = Enum.Font.Code
+output.TextSize = 13
+output.TextXAlignment = Enum.TextXAlignment.Left
+output.TextYAlignment = Enum.TextYAlignment.Top
+output.TextWrapped = true
+output.Text = "Output..."
+output.Parent = outputFrame
+
+local conclusionLabel = Instance.new("TextLabel")
+conclusionLabel.Size = UDim2.new(1,-6,0,40)
+conclusionLabel.Position = UDim2.new(0,3,1,-40)
+conclusionLabel.BackgroundTransparency = 1
+conclusionLabel.Font = Enum.Font.Code
+conclusionLabel.TextSize = 13
+conclusionLabel.TextXAlignment = Enum.TextXAlignment.Left
+conclusionLabel.TextYAlignment = Enum.TextYAlignment.Top
+conclusionLabel.TextWrapped = true
+conclusionLabel.TextColor3 = Color3.fromRGB(0,255,120)
+conclusionLabel.Parent = outputFrame
+
+-- BUTTON
+local btn = Instance.new("TextButton")
+btn.Size = UDim2.new(0.95,0,0,22)
+btn.Position = UDim2.new(0.025,0,1,-28)
+btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+btn.Text = "DEBUG"
+btn.TextColor3 = Color3.fromRGB(255,255,255)
+btn.Font = Enum.Font.GothamBold
+btn.TextSize = 13
+btn.Parent = main
+Instance.new("UICorner", btn)
+
+-- ===== CORE =====
+
+local function getLine(err)
+	return tonumber(tostring(err):match(":(%d+):"))
+end
+
+local function context(src, line)
+	local lines = {}
+	for l in (src or ""):gmatch("[^\n]+") do
+		table.insert(lines, l)
+	end
+
+	local s = math.max(1, line - 3)
+	local e = math.min(#lines, line + 3)
+
+	local out = {}
+	for i = s, e do
+		local mark = (i == line) and "👉 " or "   "
+		table.insert(out, mark .. i .. " | " .. (lines[i] or ""))
+	end
+
+	return table.concat(out, "\n")
+end
+
+-- ===== HINT ENGINE =====
+local function hint(err, src, line)
+	local e = tostring(err):lower()
+
+	-- =========================
+	-- 1. SYNTAX CORE (Lua grammar)
+	-- =========================
+	if e:find("expected") then
+
+		if e:find("then") then
+			return "Syntax: thiếu 'then' trong if statement → if ... then end"
+		end
+
+		if e:find("end") then
+			return "Block mismatch: thiếu 'end' (if/for/function/while chưa đóng)"
+		end
+
+		if e:find("%)") then
+			return "Bracket error: thiếu hoặc dư dấu ')'"
+		end
+
+		if e:find("symbol") then
+			return "Syntax broken: có ký tự sai vị trí hoặc thiếu toán tử"
+		end
+
+		return "Lua syntax error: kiểm tra cấu trúc (if/then/end, (), commas)"
+	end
+
+	-- =========================
+	-- 2. RUNTIME NIL / OBJECT
+	-- =========================
+	if e:find("attempt to index") then
+		return "Runtime nil: đang index vào nil object (chưa tạo / chưa load / sai path)"
+	end
+
+	if e:find("attempt to call") then
+		return "Type error: gọi non-function value (có thể string/table/nil)"
+	end
+
+	if e:find("attempt to perform") then
+		return "Math/type mismatch: phép toán trên kiểu dữ liệu không hợp lệ"
+	end
+
+	-- =========================
+	-- 3. VARIABLE / SCOPE
+	-- =========================
+	if e:find("nil value") then
+		return "Nil reference: biến chưa assign hoặc bị scope ngoài function"
+	end
+
+	if e:find("global") then
+		return "Scope issue: biến global/local conflict hoặc chưa khai báo đúng"
+	end
+
+	-- =========================
+	-- 4. FUNCTION / CALL SYSTEM
+	-- =========================
+	if e:find("bad argument") then
+		return "Function argument sai kiểu hoặc sai số lượng tham số"
+	end
+
+	if e:find("not a function") then
+		return "Value overwrite: biến bị ghi đè thành non-function type"
+	end
+
+	-- =========================
+	-- 5. TABLE / DATA STRUCTURE
+	-- =========================
+	if e:find("table") then
+		return "Table error: index sai key hoặc table chưa init"
+	end
+
+	if e:find("index") and e:find("nil") then
+		return "Table nil access: key không tồn tại hoặc bảng chưa tạo"
+	end
+
+	-- =========================
+	-- 6. ROBLOX SPECIFIC
+	-- =========================
+	if e:find("waitforchild") then
+		return "Roblox timing issue: object chưa replicate → cần WaitForChild"
+	end
+
+	if e:find("attempt to index") and e:find("workspace") then
+	return "Workspace index error: chỉ lỗi khi path con bị nil, không phải workspace itself"
+end
+
+if e:find("workspace") and not e:find("attempt") then
+	return "Workspace luôn tồn tại trong Roblox → đây là false positive từ detector"
+end
+
+if e:find("players") and not e:find("attempt") then
+	return "Players service luôn tồn tại → lỗi này từ heuristic, không phải runtime"
+end
+
+	-- =========================
+	-- 7. HTTP / LOAD / EXECUTION
+	-- =========================
+	if e:find("http") then
+		return "HTTP error: link sai / không raw / bị chặn request"
+	end
+
+	if e:find("loadstring") then
+		return "Compile failure: script lỗi syntax trước khi runtime"
+	end
+
+	-- =========================
+	-- 8. CROSS-LINE LOGIC (ADVANCED)
+	-- =========================
+	if src and line then
+		local lines = {}
+		for l in src:gmatch("[^\n]+") do
+			table.insert(lines, l)
+		end
+
+		local prev = lines[line - 1]
+		local curr = lines[line]
+
+		if prev and curr then
+
+			-- print \n "text"
+			if prev:match("print%s*$") and curr:match("^%s*['\"]") then
+				return "Broken call: function + argument split across lines (print misuse)"
+			end
+
+			-- local a \n = 5
+			if prev:match("local%s+%a+%s*$") and curr:match("^%s*=") then
+				return "Assignment split: local declaration bị tách dòng sai cú pháp"
+			end
+
+			-- return \n value
+			if prev:match("return%s*$") then
+				return "Return split error: return bị tách dòng → mất expression binding"
+			end
+
+			-- function split
+			if prev:match("function%s*%w*%s*$") then
+				return "Function header broken: function bị tách dòng hoặc thiếu name/()"
+			end
+		end
+	end
+
+	-- =========================
+	-- 9. LOGIC / DESIGN ERRORS
+	-- =========================
+	if e:find("infinite") then
+		return "Logic risk: có thể infinite loop hoặc recursion không dừng"
+	end
+
+	if e:find("loop") then
+		return "Loop issue: for/while có thể sai condition hoặc thiếu break"
+	end
+
+	-- =========================
+	-- 10. GENERIC INTELLIGENT FALLBACK
+	-- =========================
+	local fallback = {
+		"Debug tip: lỗi thường nằm 1–3 dòng phía trên vị trí crash",
+		"Check scope + variable overwrite (local/global conflict)",
+		"Isolate block bằng cách comment từng phần",
+		"Verify syntax tree: (), {}, if-end balance",
+		"Check nil propagation chain (object bị mất reference từ trước)",
+		"Re-run with print checkpoints để trace execution flow"
+	}
+
+	return fallback[math.random(1, #fallback)]
+end
+
+local function stripStrings(line)
+	-- remove "..." and '...'
+	line = line:gsub('".-"', '""')
+	line = line:gsub("'.-'", "''")
+	return line
+end
+
+local function isNotLuau(src)
+	if not src or src == "" then return true end
+
+	local lines = {}
+	for l in src:gmatch("[^\n]+") do
+		table.insert(lines, l)
+	end
+
+	local luaHints = 0
+	local total = #lines
+
+	local luaKeywords = {
+		"local","function","end","if","then","return","for","while",
+		"game","workspace","Instance","Enum","print"
+	}
+
+	for _, line in ipairs(lines) do
+		for _, kw in ipairs(luaKeywords) do
+			if line:find(kw) then
+				luaHints += 1
+				break
+			end
+		end
+	end
+
+	-- nếu gần như KHÔNG có syntax Luau
+	if total > 3 and luaHints <= 1 then
+		return true
+	end
+
+	-- detect spam / log dump pattern
+	if src:match("LINE %d+") and src:match("Có thể biến") then
+		return true
+	end
+
+	-- detect random text (no symbols of Lua structure)
+	if not src:find("=") and not src:find("function") and not src:find("local") then
+		if src:find(" ") and #src > 50 then
+			return true
+		end
+	end
+
+	return false
+end
+
+-- ===== STATIC MULTI SCAN =====
+local function scanErrors(src)
+	local lines = {}
+	local errors = {}
+
+	src = src or ""
+
+	for l in src:gmatch("[^\n]+") do
+		table.insert(lines, l)
+	end
+
+	-- global tracking
+	local openIf = 0
+	local openFunc = 0
+	local parenBalance = 0
+
+	-- keyword whitelist (basic Lua/Rbx)
+	local keywords = {
+		["print"] = true,
+		["game"] = true,
+		["Instance"] = true,
+		["local"] = true,
+		["function"] = true,
+		["if"] = true,
+		["then"] = true,
+		["end"] = true,
+		["for"] = true,
+		["while"] = true,
+		["return"] = true,
+	}
+	
+	local coreWhitelist = {
+	game = true,
+	workspace = true,
+	Players = true,
+	Instance = true,
+	Enum = true,
+	script = true,
+	UDim2 = true,
+	Vector3 = true,
+	Color3 = true,
+}
+
+local globalEnv = {
+	game = true,
+	workspace = true,
+	script = true,
+	shared = true,
+	_G = true,
+
+	Instance = true,
+	Enum = true,
+	task = true,
+
+	Players = true,
+	workspace = true,
+
+	print = true,
+	warn = true,
+	error = true,
+	pairs = true,
+	ipairs = true,
+	next = true,
+	tonumber = true,
+	tostring = true,
+	type = true,
+	pcall = true,
+	xpcall = true,
+}
+
+	for i, line in ipairs(lines) do
+		local l = stripStrings(line)
+
+		-- ======================
+		-- 1. PAREN CHECK
+		-- ======================
+		local openP = select(2, l:gsub("%(", ""))
+		local closeP = select(2, l:gsub("%)", ""))
+
+		parenBalance += (openP - closeP)
+
+		if openP ~= closeP then
+			table.insert(errors, {
+				line = i,
+				msg = "Sai/không khớp dấu ngoặc ()"
+			})
+		end
+
+		-- ======================
+		-- 2. IF / FUNCTION TRACK
+		-- ======================
+		if l:find("%f[%a]if%f[%A]") then openIf += 1 end
+		if l:find("%f[%a]function%f[%A]") then openFunc += 1 end
+
+		if l:find("%f[%a]end%f[%A]") then
+			if openIf > 0 then openIf -= 1 end
+			if openFunc > 0 then openFunc -= 1 end
+		end
+
+		-- ======================
+		-- 3. SAFE INDEXING
+		-- ======================
+		if l:find("%.") and not l:find("=") and not l:find("function") then
+			table.insert(errors, {
+				line = i,
+				msg = "Unsafe indexing (có thể nil object)"
+			})
+		end
+
+		-- ======================
+		-- 4. MISSING THEN
+		-- ======================
+		if l:find("%f[%a]if%f[%A]") and not l:find("then") then
+			table.insert(errors, {
+				line = i,
+				msg = "Thiếu 'then' trong if statement"
+			})
+		end
+		
+		-- ======================
+-- 8. 🔥 BROKEN LINE / TOKEN SPLIT DETECT (NEW)
+-- ======================
+
+-- detect function/keyword bị xuống dòng rời
+if line:match("^%s*(print|if|for|while|function|return)%s*$") then
+	table.insert(errors, {
+		line = i,
+		msg = "Lệnh bị ngắt dòng (thiếu phần sau câu lệnh)"
+	})
+end
+
+-- detect '=' bị tách dòng (case: local a \n = 5)
+if line:match("^%s*=%s*$") then
+	table.insert(errors, {
+		line = i,
+		msg = "Toán tử '=' bị tách dòng → sai cú pháp"
+	})
+end
+
+-- detect string/value bị rơi xuống dòng sau keyword
+if i > 1 then
+	local prev = lines[i - 1]
+
+	-- print \n "text"
+	if prev:match("print%s*$") and line:match('^%s*["\']') then
+		table.insert(errors, {
+			line = i - 1,
+			msg = "Call function bị tách dòng sai cú pháp (print + string split)"
+		})
+	end
+
+	-- return \n value
+	if prev:match("return%s*$") and not line:find("return") then
+		table.insert(errors, {
+			line = i - 1,
+			msg = "return bị tách dòng → thiếu expression"
+		})
+	end
+end
+
+		-- ======================
+		-- 5. 🔥 TYPO DETECTION (NEW)
+		-- ======================
+		for word in l:gmatch("([%a_][%w_]*)") do
+			if #word > 2 then
+				-- detect print typo
+				if word:sub(1,4) == "prit" or word:sub(1,5) == "prnit" then
+					table.insert(errors, {
+						line = i,
+						msg = "Sai chính tả: '"..word.."' → có thể là 'print'"
+					})
+				end
+
+				-- detect unknown keyword usage
+			if not keywords[word]
+and not coreWhitelist[word]
+and not globalEnv[word]
+and not word:match("^%d") then
+	if not game:GetService("Players") then continue end
+					if word ~= "then" and word ~= "end" then
+						table.insert(errors, {
+							line = i,
+							msg = "Có thể biến/hàm không tồn tại: '"..word.."'"
+						})
+					end
+				end
+			end
+		end
+
+		-- ======================
+		-- 6. FUNCTION CALL ERROR
+		-- ======================
+		if l:find("%f[%a]print%f[%A]%s+[^%(]") then
+			table.insert(errors, {
+				line = i,
+				msg = "Có thể thiếu () khi gọi function"
+			})
+		end
+
+		-- ======================
+		-- 7. MISSING '=' IN ASSIGNMENT GUESS
+		-- ======================
+		if l:find("%f[%a]local%f[%A]%s+%a+%s+%a+") and not l:find("=") then
+			table.insert(errors, {
+				line = i,
+				msg = "Có thể thiếu '=' trong khai báo biến"
+			})
+		end
+
+	end
+
+	-- ======================
+	-- GLOBAL ERRORS
+	-- ======================
+	if openIf ~= 0 then
+		table.insert(errors, {line = 0, msg = "Thiếu 'end' trong if block"})
+	end
+
+	if openFunc ~= 0 then
+		table.insert(errors, {line = 0, msg = "Thiếu 'end' trong function block"})
+	end
+
+	if parenBalance ~= 0 then
+		table.insert(errors, {line = 0, msg = "Ngoặc () không cân bằng toàn script"})
+	end
+
+-- ======================
+-- 🔥 CROSS LINE TOKEN SPLIT DETECTION (PRINT / FUNCTION / KEYWORD)
+-- ======================
+
+for i = 2, #lines do
+	local prev = lines[i - 1]
+	local curr = lines[i]
+
+	-- print
+	if prev:match("print%s*$") then
+		table.insert(errors, {
+			line = i - 1,
+			msg = "Broken statement: 'print' bị tách dòng (thiếu dấu ngoặc hoặc argument)"
+		})
+	end
+
+	-- function call split
+	if prev:match("%a+%s*$") and curr:match("^%s*%(") then
+		table.insert(errors, {
+			line = i - 1,
+			msg = "Function call bị tách dòng (name + args split)"
+		})
+	end
+
+	-- local assignment split
+	if prev:match("local%s+%a+%s*$") and curr:match("^%s*=") then
+		table.insert(errors, {
+			line = i - 1,
+			msg = "Assignment split dòng (local a \\n = value)"
+		})
+	end
+
+	-- return split
+	if prev:match("return%s*$") then
+		table.insert(errors, {
+			line = i - 1,
+			msg = "return bị tách dòng → mất expression"
+		})
+	end
+end
+
+	return errors
+end
+
+-- ===== WHAT TO DO ENGINE =====
+local function suggest(err)
+	local e = tostring(err):lower()
+
+	-- syntax
+	if e:find("expected") and e:find("')") then
+		return {
+			"✔ Kiểm tra xem có thiếu dấu ')'",
+			"✔ Nhìn dòng phía trên lỗi (thường là chưa đóng hàm)",
+			"✔ Đếm số '(' và ')' xem có bằng nhau không"
+		}
+	end
+
+	if e:find("expected 'end'") then
+		return {
+			"✔ Thêm 'end' ở cuối block if/function/for",
+			"✔ Kiểm tra xem có quên đóng function không",
+			"✔ Dùng format indent để dễ nhìn scope"
+		}
+	end
+
+	if e:find("attempt to index") then
+		return {
+			"✔ Biến đang nil → kiểm tra object có tồn tại chưa",
+			"✔ Dùng WaitForChild nếu là Roblox instance",
+			"✔ Check xem biến có bị override không"
+		}
+	end
+
+	if e:find("attempt to call") then
+		return {
+			"✔ Bạn đang gọi thứ không phải function",
+			"✔ Kiểm tra biến có bị ghi đè thành string/table không",
+			"✔ Debug bằng print(type(var))"
+		}
+	end
+
+	if e:find("http") then
+		return {
+			"✔ Link HttpGet sai hoặc không raw",
+			"✔ Test link trên browser trước",
+			"✔ Đảm bảo GitHub/raw/text endpoint"
+		}
+	end
+
+	return {
+		"✔ Check logic tổng thể",
+		"✔ Dùng print debug từng bước",
+		"✔ Xem lại dòng gần lỗi nhất"
+	}
+end
+
+-- ===== AUTO FIX LINE ENGINE =====
+local function autoFix(err, lineText)
+	local e = tostring(err):lower()
+
+	-- missing ')'
+	if e:find("expected") and e:find("')") then
+		if not lineText:find("%)") then
+			return lineText .. ")"
+		end
+	end
+
+	-- missing 'end' (basic fallback)
+	if e:find("expected 'end'") then
+		return lineText .. "\nend"
+	end
+
+	-- remove broken trailing comma (basic safe fix)
+	if e:find("unexpected symbol") then
+		if lineText:sub(-1) == "," then
+			return lineText:sub(1, -2)
+		end
+	end
+
+	-- nil index safe hint (no real fix possible)
+	if e:find("attempt to index") then
+		return "-- FIX: check nil before use -> " .. lineText
+	end
+
+	return "-- NO AUTO FIX AVAILABLE -> " .. lineText
+end
+
+-- ===== SOURCE =====
+local function getSource(text)
+	if text:match("^https?://") then
+		local ok, res = pcall(function()
+			return game:HttpGet(text)
+		end)
+		if ok then return res, "LINK" end
+	end
+
+	return text, "RAW"
+end
+
+-- ===== FORMAT V5 STYLE =====
+local function formatV5(scriptName, err, src, line)
+	local s = suggest(err)
+
+	return
+	"================= 💀 MAX DEBUG ENGINE v8 =================\n" ..
+	"Script : " .. scriptName .. "\n" ..
+	"Type   : ERROR\n" ..
+	"Line   : " .. tostring(line) .. "\n\n" ..
+
+	"💥 ERROR:\n" .. tostring(err) .. "\n\n" ..
+
+	"🧠 HINT:\n" .. hint(err) .. "\n\n" ..
+
+	"🟢 WHAT TO DO:\n" ..
+	table.concat(s, "\n") .. "\n\n" ..
+
+	"📌 CONTEXT:\n" .. context(src, line or 1) .. "\n\n" ..
+
+	"🧩 TRACE EXPLAIN:\n" ..
+	"🔹 " .. tostring(err) .. "\n" ..
+	
+	"🧩 AUTO FIX (SUGGESTED CODE):\n" ..
+autoFix(err, (src and src:match("[^\n]*", (line or 1)) or "")) ..
+"\n\n" ..
+
+	"===========================================================\n"
+end
+
+local function getConclusion(errorCount, fatal, runtimeFail)
+	if runtimeFail then
+		return "✨ KẾT LUẬN: SCRIPT NÁT, KHÔNG DÙNG ĐƯỢC 💀"
+	end
+
+	if fatal >= 3 or errorCount >= 10 then
+		return "✨ KẾT LUẬN: SCRIPT VẪN CHẠY ĐƯỢC, NHƯNG KHÔNG ỔN ĐỊNH VÀI CHỖ 😑"
+	end
+
+	if errorCount == 0 then
+		return "✨ KẾT LUẬN: SCRIPT ỔN HOÀN TOÀN 👍 🎉"
+	end
+
+	return "✨ KẾT LUẬN: SCRIPT CÓ VÀI LỖI NHỎ, CẦN SỬA 😐"
+end
+
+-- ===== MAIN =====
+local function runDebug()
+
+local errorCount = 0
+local fatal = 0
+local runtimeFail = false
+
+	local src = getSource(input.Text)
+
+-- 🔥 CHECK NOT LUAU FIRST
+if isNotLuau(src) then
+	output.Text =
+	"=================\n" ..
+	"⚠️ NOT A LUAU SCRIPT\n" ..
+	"=================\n\n" ..
+	"Input này KHÔNG giống code Luau hợp lệ.\n" ..
+	"Có thể là:\n" ..
+	"- log dump / debug output\n" ..
+	"- text UI spam\n" ..
+	"- error trace\n" ..
+	"- hoặc dữ liệu không phải script\n"
+
+	copy(output.Text)
+	return
+end
+
+	local report = {}
+
+	-- MULTI STATIC
+	for _, e in ipairs(scanErrors(src)) do
+	table.insert(report, "🟡 LINE "..e.line.." : "..e.msg)
+	errorCount += 1
+end
+
+	-- SYNTAX
+	local fn, err = loadstring(src)
+
+	if not fn then
+	runtimeFail = true
+	fatal += 1
+	table.insert(report, formatV5("Script", err, src, getLine(err) or 1))
+	else
+
+		-- RUNTIME
+		local ok, runtimeErr = pcall(fn)
+
+		if not ok then
+	runtimeFail = true
+	fatal += 1
+	table.insert(report,
+		formatV5("Script", runtimeErr, src, getLine(runtimeErr) or 1)
+	)
+		else
+			table.insert(report,
+				"=================\n✅ NO ERROR DETECTED\n================="
+			)
+		end
+	end
+	
+	local finalText = table.concat(report, "\n\n")
+
+-- tách conclusion ra
+local finalText = table.concat(report, "\n\n")
+
+local conclusion = getConclusion(errorCount, fatal, runtimeFail)
+
+finalText = finalText .. "\n\n" .. conclusion
+
+output.Text = finalText
+copy(finalText)
+table.insert(report, "\n" .. conclusion)
+conclusionLabel.Text = getConclusion(errorCount, fatal, runtimeFail)
+end
+
+btn.MouseButton1Click:Connect(runDebug)
