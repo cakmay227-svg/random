@@ -1,0 +1,38 @@
+game:GetService("TextChatService").TextChannels.RBXGeneral:DisplaySystemMessage("<font color='#9d00ff'>[Insane Mode]: Script Succesfully Executed/Loaded.</font>")
+
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Insane Mode has activated! ",true) 
+task.wait(2)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Made by Guestly",true)
+task.wait(2)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Original by idk",true)
+task.wait(2)
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Enjoy!",true)
+
+game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+
+-- Rip
+coroutine.wrap(function()
+    while true do
+        task.wait(170)
+        game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/rip"))()
+    end
+end)()
+
+-- Fatality
+coroutine.wrap(function()
+    while true do
+        task.wait(380)
+        game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/fatality"))()
+    end
+end)()
+
+-- Itreat
+coroutine.wrap(function()
+    while true do
+        task.wait(530)
+        game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/Itreat"))()
+    end
+end)()
