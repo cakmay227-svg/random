@@ -1,38 +1,104 @@
-game:GetService("TextChatService").TextChannels.RBXGeneral:DisplaySystemMessage("<font color='#9d00ff'>[Insane Mode]: Script Succesfully Executed/Loaded.</font>")
+local Players = game:GetService("Players")
+local TextChatService = game:GetService("TextChatService")
+local LocalPlayer = Players.LocalPlayer
 
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Insane Mode has activated! ",true) 
+local function GetPreciseServerTime()
+    return workspace:GetServerTimeNow()
+end
+
+task.spawn(function() 
+TextChatService.TextChannels.RBXGeneral:DisplaySystemMessage("<font color='#00ff00'>[Insane Mode (Recreated)]: Script has successfully loaded! </font>")
 task.wait(2)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Made by Guestly",true)
+TextChatService.TextChannels.RBXGeneral:DisplaySystemMessage("<font color='#ff0000'>[???]: Insane Mode (Recreated) enter. </font>")
+TextChatService.TextChannels.RBXGeneral:DisplaySystemMessage("<font color='#ff0000'>[???]:You Think You Can Beat This Mode? </font>")
+TextChatService.TextChannels.RBXGeneral:DisplaySystemMessage("<font color='#ff0000'>[???]:I Think Bad For You :) </font>")
+TextChatService.TextChannels.RBXGeneral:DisplaySystemMessage("<font color='#ff0000'>[???]: Good Luck</font>")
+end) 
+
+task.spawn(function() 
+local shut = game.Players.LocalPlayer.PlayerGui.MainUI.MainFrame.IntroText
+local intro = shut:Clone()
+intro.Parent = game.Players.LocalPlayer.PlayerGui.MainUI
+intro.Name = "Insane"
+intro.Visible = true
+intro.Text = "The Insane"
+intro.TextTransparency = 0
+local underline = UDim2.new(1.1, 0, 0.015, 6)
+game.TweenService:Create(intro.Underline, TweenInfo.new(3), {Size = underline}):Play()
+wait(7)
+game.TweenService:Create(intro.Underline, TweenInfo.new(1.3), {Size = UDim2.new(0.95, 0, 0.015, 6)}):Play()
+wait(1)
+game.TweenService:Create(intro.Underline, TweenInfo.new(2), {ImageTransparency = 1}):Play()
+game.TweenService:Create(intro, TweenInfo.new(2), {TextTransparency = 1}):Play()
+game.TweenService:Create(intro.Underline, TweenInfo.new(7), {Size = UDim2.new(0, 0, 0.015, 6)}):Play()
+wait(2.3)
+intro.Visible = false
+wait(4)
+intro:Destroy()
+end) 
+
+task.spawn(function() 
+local MainGame = require(LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
+MainGame.caption("Insane Mode (Recreated) By Guestly (OG By TheDarkMan)", true)
 task.wait(2)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Original by idk",true)
-task.wait(2)
-require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Enjoy!",true)
+local MainGame2 = require(LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game)
+MainGame2.caption("I think bad for you", true)
+end) 
 
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+game.Lighting.FogStart = 10
+game.Lighting.FogEnd = 40
 
--- Rip
-coroutine.wrap(function()
-    while true do
-        task.wait(170)
-        game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/rip"))()
-    end
-end)()
+local EntityList = {
+    {"https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/rip", 170, 210, 100000},
+    {"https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/fatality", 300, 460, 200000},
+    {"https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/Itreat", 450, 620, 300000},
+}
 
--- Fatality
-coroutine.wrap(function()
-    while true do
-        task.wait(380)
-        game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/fatality"))()
-    end
-end)()
+local function StartEntity(data)
+    local url, minTime, maxTime, offset = unpack(data)
+    
+    coroutine.wrap(function()
+        local lastSpawnTime = GetPreciseServerTime()
+        local BaseSeed = 0
+        for i = 1, #game.JobId do BaseSeed += game.JobId:byte(i) end
+        local rng = Random.new(BaseSeed + offset)
 
--- Itreat
-coroutine.wrap(function()
-    while true do
-        task.wait(530)
-        game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/Itreat"))()
-    end
-end)()
+        while true do
+            local nextInterval = rng:NextInteger(minTime, maxTime)
+            local targetTime = lastSpawnTime + nextInterval
+            
+            while GetPreciseServerTime() < targetTime do
+                local remaining = targetTime - GetPreciseServerTime()
+                if remaining > 0.1 then
+                    task.wait(0.05)
+                else
+                    task.wait() 
+                end
+            end
+           
+            local GameData = game:GetService("ReplicatedStorage"):FindFirstChild("GameData")
+            local LatestRoom = GameData and GameData:FindFirstChild("LatestRoom")
+            
+            if not LatestRoom or LatestRoom.Value > 0 then
+                local success, err = pcall(function()
+                    loadstring(game:HttpGet(url))()
+                end)
+                
+                if success then
+                    lastSpawnTime = targetTime 
+                else
+                    warn("[Elite Sync] Load Error: " .. tostring(err))
+                    task.wait(5)
+                    lastSpawnTime = GetPreciseServerTime()
+                end
+            else
+                lastSpawnTime = GetPreciseServerTime()
+                task.wait(1)
+            end
+        end
+    end)()
+end
+
+for _, entityData in pairs(EntityList) do
+    StartEntity(entityData)
+end
