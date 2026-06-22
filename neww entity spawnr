@@ -109,7 +109,9 @@ local CONST = {
 				Max = 4,
 				Delay = 2,
 				DelayEachNode = 0, -- Hỗ trợ delay từng node bạn đã thêm
-				DoorChecking = false
+				DoorChecking = false, 
+				DoorCheckingDelay = 0, 
+				CheckLoop = false
 			},
 			Lights = {
 				Flicker = {
@@ -838,9 +840,8 @@ Module.Run = function(self, entity: any, copyEntity: boolean)
     end)
 
     task.spawn(function()
-                                -- <--- CẬP NHẬT LẠI KHỐI NÀY ĐỂ ĐẢM BẢO TỐI ƯU VÀ KHÔNG BỊ LỖI --->
-        if config.Rebounding.DoorChecking then
-            -- Tính năng DoorChecking: Bỏ qua PathfindNodes toàn cục, rẽ nhánh theo từng phòng
+                                             if config.Rebounding.DoorChecking then
+            -- Tính năng DoorChecking tối ưu: Bám theo PathfindingNodes, chuyển hướng tới DoorNormal khi có tầm nhìn
             local rooms = CurrentRooms:GetChildren()
             if config.Movement.Reversed then
                 local reversedRooms = {}
@@ -850,40 +851,93 @@ Module.Run = function(self, entity: any, copyEntity: boolean)
                 rooms = reversedRooms
             end
 
-            for _, room in ipairs(rooms) do
-                local doorNormals = {}
-                for _, descendant in ipairs(room:GetDescendants()) do
-                    if descendant:IsA("Model") and descendant.Name == "DoorNormal" then
-                        table.insert(doorNormals, descendant)
-                    end
-                end
+            -- Lưu trữ các phòng đã kiểm tra cửa DoorNormal
+            local checkedRooms = {}
 
-                if #doorNormals > 0 then
-                    -- Nếu có DoorNormal -> Di chuyển tuần tự qua các model cửa
-                    for _, doorModel in ipairs(doorNormals) do
-                        local primaryPart = doorModel.PrimaryPart or doorModel:FindFirstChildWhichIsA("BasePart")
-                        if primaryPart then
-                            local cframe = primaryPart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
-                            EntityMoveTo(model, cframe, config.Movement.Speed)
-                            task.spawn(entity.RunCallback, entity, "OnReachNode", primaryPart)
-                            
-                            -- Dừng 1s tại mỗi cửa trước khi tìm cửa hoặc phòng tiếp theo
-                            task.wait(1)
-                        end
-                    end
-                else
-                    -- DỰ PHÒNG: Nếu phòng không có DoorNormal -> Tự động dùng lại PathfindingNodes của phòng đó để đi tiếp
+            for _, room in ipairs(rooms) do
+                -- Nếu CheckLoop là false và phòng đã check rồi thì bỏ qua (ignore)
+                if not config.Rebounding.CheckLoop and checkedRooms[room] then
+                    -- Vẫn cho bám theo pathfinding node bình thường để không bị kẹt hay xuyên tường
                     local fallbackNodes = GetNodesFromRoom(room, config.Movement.Reversed)
-                    for _, v in ipairs(fallbackNodes) do
-                        local cframe = v.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
-                        EntityMoveTo(model, cframe, config.Movement.Speed)
+                    for _, nodePart in ipairs(fallbackNodes) do
+                        local cframeNode = nodePart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
+                        EntityMoveTo(model, cframeNode, config.Movement.Speed)
                         
-                        -- Hỗ trợ delay node nếu có cài đặt
                         if config.Rebounding.DelayEachNode and config.Rebounding.DelayEachNode > 0 then
                             task.wait(config.Rebounding.DelayEachNode)
                         end
-                        task.spawn(entity.RunCallback, entity, "OnReachNode", v)
+                        task.spawn(entity.RunCallback, entity, "OnReachNode", nodePart)
                     end
+                else
+                    -- Tiến hành kiểm tra DoorNormals của phòng
+                    local doorNormals = {}
+                    for _, descendant in ipairs(room:GetDescendants()) do
+                        if descendant:IsA("Model") and descendant.Name == "DoorNormal" then
+                            table.insert(doorNormals, descendant)
+                        end
+                    end
+
+                    local roomNodes = GetNodesFromRoom(room, config.Movement.Reversed)
+                    local doorTargetIndex = 1
+
+                    for nodeIdx, nodePart in ipairs(roomNodes) do
+                        if doorNormals[doorTargetIndex] then
+                            local doorModel = doorNormals[doorTargetIndex]
+                            local doorPart = doorModel.PrimaryPart or doorModel:FindFirstChildWhichIsA("BasePart")
+                            
+                            if doorPart then
+                                local origin = model:GetPivot().Position
+                                local direction = (doorPart.Position - origin)
+                                
+                                local params = RaycastParams.new()
+                                params.FilterType = Enum.RaycastFilterType.Exclude
+                                params.FilterDescendantsInstances = {model, Character}
+                                params.CollisionGroup = "Wall"
+                                
+                                local raycastResult = workspace:Raycast(origin, direction, params)
+                                
+                                if not raycastResult then
+                                    local cframeDoor = doorPart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
+                                    EntityMoveTo(model, cframeDoor, config.Movement.Speed)
+                                    task.spawn(entity.RunCallback, entity, "OnReachNode", doorPart)
+                                    
+                                    local delayTime = config.Rebounding.DoorCheckingDelay or 0
+                                    if delayTime > 0 then
+                                        task.wait(delayTime)
+                                    end
+                                    
+                                    doorTargetIndex = doorTargetIndex + 1
+                                end
+                            end
+                        end
+
+                        local cframeNode = nodePart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
+                        EntityMoveTo(model, cframeNode, config.Movement.Speed)
+                        
+                        if config.Rebounding.DelayEachNode and config.Rebounding.DelayEachNode > 0 then
+                            task.wait(config.Rebounding.DelayEachNode)
+                        end
+                        task.spawn(entity.RunCallback, entity, "OnReachNode", nodePart)
+                    end
+
+                    while doorNormals[doorTargetIndex] do
+                        local doorModel = doorNormals[doorTargetIndex]
+                        local doorPart = doorModel.PrimaryPart or doorModel:FindFirstChildWhichIsA("BasePart")
+                        if doorPart then
+                            local cframeDoor = doorPart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
+                            EntityMoveTo(model, cframeDoor, config.Movement.Speed)
+                            task.spawn(entity.RunCallback, entity, "OnReachNode", doorPart)
+                            
+                            local delayTime = config.Rebounding.DoorCheckingDelay or 0
+                            if delayTime > 0 then
+                                task.wait(delayTime)
+                            end
+                        end
+                        doorTargetIndex = doorTargetIndex + 1
+                    end
+
+                    -- Đánh dấu phòng này đã được check
+                    checkedRooms[room] = true
                 end
             end
         else
