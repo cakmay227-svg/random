@@ -878,8 +878,8 @@ Module.Run = function(self, entity: any, copyEntity: boolean)
     end)
 
     task.spawn(function()
-                                                     if config.Rebounding.DoorChecking then
-            -- TĂ­nh nÄƒng DoorChecking tá»‘i Æ°u: Lá»“ng ghĂ©p vĂ o cÆ¡ cháº¿ Rebound (quay Ä‘áº§u)
+                                                             if config.Rebounding.DoorChecking then
+            -- Tính năng DoorChecking tối ưu: Lồng ghép vào cơ chế Rebound (quay đầu) có xét NodeByNode
             local function runRoomsCheck(isReversed, checkedRooms)
                 local rooms = CurrentRooms:GetChildren()
                 if isReversed then
@@ -892,8 +892,7 @@ Module.Run = function(self, entity: any, copyEntity: boolean)
 
                 for _, room in ipairs(rooms) do
                     if not entity:IsAlive() then return end
-                    
-                    -- Kiá»ƒm tra CheckLoop
+            
                     if not config.Rebounding.CheckLoop and checkedRooms[room] then
                         local fallbackNodes = GetNodesFromRoom(room, isReversed)
                         for _, nodePart in ipairs(fallbackNodes) do
@@ -913,30 +912,11 @@ Module.Run = function(self, entity: any, copyEntity: boolean)
                             end
                         end
 
-                                                local roomNodes = GetNodesFromRoom(room, isReversed)
-
-                        -- Kiểm tra nếu NodeByNode cài là false và phòng KHÔNG có DoorNormal (chỉ random node cho phòng không có cửa chuyển phòng)
-                        if #doorNormals == 0 and not config.Movement.NodeByNode then
-                            -- Lọc bỏ node đầu và node cuối phòng để thực thể không bị dịch chuyển vào sát vách cửa
-                            local availableNodes = {}
-                            for idx = 2, #roomNodes - 1 do
-                                table.insert(availableNodes, roomNodes[idx])
-                            end
-
-                            if #availableNodes > 0 then
-                                local randNode = availableNodes[math.random(1, #availableNodes)]
-                                local cframeRand = randNode.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
-                                EntityMoveTo(model, cframeRand, config.Movement.Speed)
-                                task.spawn(entity.RunCallback, entity, "OnReachNode", randNode)
-                                
-                                if config.Rebounding.DelayEachNode and config.Rebounding.DelayEachNode > 0 then
-                                    task.wait(config.Rebounding.DelayEachNode)
-                                end
-                            end
-                        else
-                            -- Nếu NodeByNode là true hoặc phòng có chứa DoorNormal -> Chạy tuần tự qua các node bình thường
+                        local roomNodes = GetNodesFromRoom(room, isReversed)
+                        
+                        -- CHỈNH SỬA TRIỆT ĐỂ: Nếu phòng có DoorNormal, nhường toàn bộ quyền xử lý cho DoorChecking
+                        if #doorNormals > 0 then
                             local doorTargetIndex = 1
-
                             for nodeIdx, nodePart in ipairs(roomNodes) do
                                 if not entity:IsAlive() then return end
                                 
@@ -992,6 +972,38 @@ Module.Run = function(self, entity: any, copyEntity: boolean)
                                     end
                                 end
                                 doorTargetIndex = doorTargetIndex + 1
+                            end
+                            
+                        -- PHÒNG KHÔNG CÓ DOORNORMAL: Xét cấu hình NodeByNode
+                        else
+                            -- Nếu NodeByNode = false (Random node trong phòng không có cửa)
+                            if not config.Movement.NodeByNode then
+                                local availableNodes = {}
+                                for idx = 2, #roomNodes - 1 do
+                                    table.insert(availableNodes, roomNodes[idx])
+                                end
+
+                                if #availableNodes > 0 then
+                                    local randNode = availableNodes[math.random(1, #availableNodes)]
+                                    local cframeRand = randNode.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
+                                    EntityMoveTo(model, cframeRand, config.Movement.Speed)
+                                    task.spawn(entity.RunCallback, entity, "OnReachNode", randNode)
+                                    
+                                    if config.Rebounding.DelayEachNode and config.Rebounding.DelayEachNode > 0 then
+                                        task.wait(config.Rebounding.DelayEachNode)
+                                    end
+                                end
+                            -- Nếu NodeByNode = true (Tuần tự từng node bình thường)
+                            else
+                                for _, nodePart in ipairs(roomNodes) do
+                                    if not entity:IsAlive() then return end
+                                    local cframeNode = nodePart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
+                                    EntityMoveTo(model, cframeNode, config.Movement.Speed)
+                                    if config.Rebounding.DelayEachNode and config.Rebounding.DelayEachNode > 0 then
+                                        task.wait(config.Rebounding.DelayEachNode)
+                                    end
+                                    task.spawn(entity.RunCallback, entity, "OnReachNode", nodePart)
+                                end
                             end
                         end
 
