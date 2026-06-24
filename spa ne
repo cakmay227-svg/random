@@ -68,10 +68,6 @@ local Storage = {
 	}
 }
 
-local SavedClones = {}
-local isEntityActive = true
-local roomsFolder = workspace:WaitForChild("CurrentRooms")
-
 local CONST = {
 	BASE_ENTITY_SPEED = 65,
 	ATTR = {
@@ -139,7 +135,7 @@ local CONST = {
 				Range = 40,
 				Resist = false,
 				Break = true, 
-				CrucifixType = "Current"
+				Type = Old
 			},
 			Death = {
 				Type = "Guiding",
@@ -303,34 +299,27 @@ end
 local function CrucifixEntity(entity: any, tool: Tool)
 	local model = entity.Model
 	local config = entity.Config
+	local crucifixionConfig = config.Crucifixion
+	local crucifixType = crucifixionConfig.Type or "Current" -- Lấy loại cấu hình[span_1](start_span)[span_1](end_span)
 	
-	local crucifixType = config.Crucifixion.CrucifixType or "Current"
-	
+	-- Xử lý chế độ "Old": Thực thể dừng di chuyển, rung màn hình và tự hủy sau 30s[span_2](start_span)[span_2](end_span)
 	if crucifixType == "Old" then
-		-- Chặn damage, đánh dấu trạng thái bị trục xuất kiểu "Old"
-		model:SetAttribute("Damage", false)
-		model:SetAttribute("BanishedOld", true) -- 🔥 Gán cờ hiệu
+		model:SetAttribute("Paused", true)
+		if model.PrimaryPart then model.PrimaryPart.Anchored = true end
 		
-		-- Rung màn hình mạnh 1 phát
-		if Modules.Main_Game and Modules.Main_Game.camShaker then
-			Modules.Main_Game.camShaker:ShakeOnce(15, 15, 0.5, 2.5)
-		end
+		-- Rung màn hình mạnh 1 phát[span_3](start_span)[span_3](end_span)
+		Modules.Main_Game.camShaker:ShakeOnce(15, 15, 0.2, 0.5)
 		
-		-- Ép đảo ngược hướng di chuyển qua các node
-		config.Movement.Reversed = true
-		
-		-- Hủy thánh giá trên tay người chơi
-		if tool and tool.Parent then
-			tool:Destroy()
-		end
-		
-		return
+		task.delay(30, function()
+			if entity:IsAlive() then
+				entity:Despawn()
+			end
+		end)
+		return 
 	end
-    
-    -- (Giữ nguyên phần code xử lý "Current" bên dưới...)    
-	
-	-- 🌟 Cấu hình "Current" (Mặc định giữ nguyên cơ chế gốc của Vynixu)
-	local resist = config.Crucifixion.Resist
+
+	-- Logic "Current" (Mặc định): Chức năng cũ của script[span_4](start_span)[span_4](end_span)
+	local resist = crucifixionConfig.Resist
 	local toolPivot = tool:GetPivot()
 	local entityPivot = model:GetPivot()
 
@@ -346,7 +335,7 @@ local function CrucifixEntity(entity: any, tool: Tool)
 	local crucifix = repentance.Crucifix
 	local pentagram = repentance.Pentagram
 	local entityPart = repentance.Entity
-	local sound = (config.Crucifixion.Resist and crucifix.SoundFail or crucifix.Sound)
+	local sound = (resist and crucifix.SoundFail or crucifix.Sound)
 	local shaker = Modules.Main_Game.camShaker:StartShake(5, 20, 2, Vector3.new())
 
 	local function waitUntil(t: number)
@@ -630,37 +619,6 @@ local function Earthquake()
     end
 end
 
-local function clonePath(room)
-    if SavedClones[room] then return end
-
-    local nodes = room:FindFirstChild("PathfindNodes")
-    if not nodes then return end
-
-    local clone = nodes:Clone()
-    clone.Name = "PathfindNodes"
-    clone.Parent = room
-
-    SavedClones[room] = clone
-end
-
-local function removeClone(room)
-    if SavedClones[room] then
-        SavedClones[room]:Destroy()
-        SavedClones[room] = nil
-    end
-end
-
--- 🔥 CHECK CỰC NHANH (Heartbeat level)
-game:GetService("RunService").Heartbeat:Connect(function()
-    if not isEntityActive then return end -- Dừng lặp ngay lập tức nếu thực thể không còn
-    
-    for _, room in ipairs(roomsFolder:GetChildren()) do
-        if not SavedClones[room] then
-            clonePath(room)
-        end
-    end
-end)
-
 for name, value in next, CONST.ATTR.PLAYER do
 	LocalPlayer:SetAttribute(name, value)
 end
@@ -749,10 +707,8 @@ Module.Create = function(self, config: any): any?
         Run = function(self, copyEntity: boolean)
             Module:Run(self, copyEntity)
         end,
-                Despawn = function(self)
+        Despawn = function(self)
             if self:IsAlive() then
-                isEntityActive = false -- 🔥 Vô hiệu hóa vòng lặp Heartbeat ngay khi thực thể despawn
-                
                 self.Model:Destroy()
                 local i = table.find(Module.ActiveEntities, self)
                 if i then
@@ -904,133 +860,106 @@ Module.Run = function(self, entity: any, copyEntity: boolean)
         end
     end)
 
-           task.spawn(function()
-            if config.Rebounding.DoorChecking then
-                -- Tính năng DoorChecking tối ưu lồng ghép vào cơ chế Rebound (quay đầu)
-                local function runRoomsCheck(isReversed, checkedRooms)
-                -- Bên trong hàm runRoomsCheck, khi lấy danh sách phòng:
-local rooms = CurrentRooms:GetChildren()
-
--- 🔥 Nếu đang bị trục xuất kiểu Old, cho phép nó duyệt ngược mảng phòng lại để rút lui về phòng xuất phát
-if model:GetAttribute("BanishedOld") then
-	isReversed = true
-	local reversedRooms = {}
-	for i = #rooms, 1, -1 do
-		table.insert(reversedRooms, rooms[i])
-	end
-	rooms = reversedRooms
-end
-end
-
-                    if isReversed then
-                        local reversedRooms = {}
-                        for i = #rooms, 1, -1 do
-                            table.insert(reversedRooms, rooms[i])
-                        end
-                        rooms = reversedRooms
+    task.spawn(function()
+                                                     if config.Rebounding.DoorChecking then
+            -- TĂ­nh nÄƒng DoorChecking tá»‘i Æ°u: Lá»“ng ghĂ©p vĂ o cÆ¡ cháº¿ Rebound (quay Ä‘áº§u)
+            local function runRoomsCheck(isReversed, checkedRooms)
+                local rooms = CurrentRooms:GetChildren()
+                if isReversed then
+                    local reversedRooms = {}
+                    for i = #rooms, 1, -1 do
+                        table.insert(reversedRooms, rooms[i])
                     end
+                    rooms = reversedRooms
+                end
 
-                    for _, room in ipairs(rooms) do
-                        if not entity:IsAlive() then return end
-                
-                        if not config.Rebounding.CheckLoop and checkedRooms[room] then
-                            local fallbackNodes = GetNodesFromRoom(room, isReversed)
-                            for _, nodePart in ipairs(fallbackNodes) do
-                                if not entity:IsAlive() then return end
-                                local cframeNode = nodePart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
-                                EntityMoveTo(model, cframeNode, config.Movement.Speed)
-                                if config.Rebounding.DelayEachNode and config.Rebounding.DelayEachNode > 0 then
-                                    task.wait(config.Rebounding.DelayEachNode)
-                                end
-                                task.spawn(entity.RunCallback, entity, "OnReachNode", nodePart)
+                for _, room in ipairs(rooms) do
+                    if not entity:IsAlive() then return end
+                    
+                    -- Kiá»ƒm tra CheckLoop
+                    if not config.Rebounding.CheckLoop and checkedRooms[room] then
+                        local fallbackNodes = GetNodesFromRoom(room, isReversed)
+                        for _, nodePart in ipairs(fallbackNodes) do
+                            if not entity:IsAlive() then return end
+                            local cframeNode = nodePart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
+                            EntityMoveTo(model, cframeNode, config.Movement.Speed)
+                            if config.Rebounding.DelayEachNode and config.Rebounding.DelayEachNode > 0 then
+                                task.wait(config.Rebounding.DelayEachNode)
                             end
-                        else
-                            local doorNormals = {}
-                            for _, descendant in ipairs(room:GetDescendants()) do
-                                if descendant:IsA("Model") and descendant.Name == "DoorNormal" then
-                                    table.insert(doorNormals, descendant)
-                                end
+                            task.spawn(entity.RunCallback, entity, "OnReachNode", nodePart)
+                        end
+                    else
+                        local doorNormals = {}
+                        for _, descendant in ipairs(room:GetDescendants()) do
+                            if descendant:IsA("Model") and descendant.Name == "DoorNormal" then
+                                table.insert(doorNormals, descendant)
                             end
+                        end
 
-                            local roomNodes = GetNodesFromRoom(room, isReversed)
-                            
-                            -- Nếu phòng có cửa, ép buộc bám sát cửa
-                            if #doorNormals > 0 then
-                                local doorTargetIndex = 1
-                                for nodeIdx, nodePart in ipairs(roomNodes) do
-                                    if not entity:IsAlive() then return end
+                        local roomNodes = GetNodesFromRoom(room, isReversed)
+                        local doorTargetIndex = 1
+
+                        for nodeIdx, nodePart in ipairs(roomNodes) do
+                            if not entity:IsAlive() then return end
+                            if doorNormals[doorTargetIndex] then
+                                local doorModel = doorNormals[doorTargetIndex]
+                                local doorPart = doorModel.PrimaryPart or doorModel:FindFirstChildWhichIsA("BasePart")
+                                
+                                if doorPart then
+                                    local origin = model:GetPivot().Position
+                                    local direction = (doorPart.Position - origin)
                                     
-                                    if doorNormals[doorTargetIndex] then
-                                        local doorModel = doorNormals[doorTargetIndex]
-                                        local doorPart = doorModel.PrimaryPart or doorModel:FindFirstChildWhichIsA("BasePart")
-                                        
-                                        if doorPart then
-                                            local origin = model:GetPivot().Position
-                                            local direction = (doorPart.Position - origin)
-                                            
-                                            local params = RaycastParams.new()
-                                            params.FilterType = Enum.RaycastFilterType.Exclude
-                                            params.FilterDescendantsInstances = {model, Character}
-                                            params.CollisionGroup = "Wall"
-                                            
-                                            local raycastResult = workspace:Raycast(origin, direction, params)
-                                            
-                                            if not raycastResult then
-                                                local cframeDoor = doorPart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
-                                                EntityMoveTo(model, cframeDoor, config.Movement.Speed)
-                                                task.spawn(entity.RunCallback, entity, "OnReachNode", doorPart)
-                                                
-                                                local delayTime = config.Rebounding.DoorCheckingDelay or 0
-                                                if delayTime > 0 then
-                                                    task.wait(delayTime)
-                                                end
-                                                doorTargetIndex = doorTargetIndex + 1
-                                            end
-                                        end
-                                    end
-
-                                    local cframeNode = nodePart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
-                                    EntityMoveTo(model, cframeNode, config.Movement.Speed)
-                                    if config.Rebounding.DelayEachNode and config.Rebounding.DelayEachNode > 0 then
-                                        task.wait(config.Rebounding.DelayEachNode)
-                                    end
-                                    task.spawn(entity.RunCallback, entity, "OnReachNode", nodePart)
-                                end
-
-                                while doorNormals[doorTargetIndex] do
-                                    if not entity:IsAlive() then return end
-                                    local doorModel = doorNormals[doorTargetIndex]
-                                    local doorPart = doorModel.PrimaryPart or doorModel:FindFirstChildWhichIsA("BasePart")
-                                    if doorPart then
+                                    local params = RaycastParams.new()
+                                    params.FilterType = Enum.RaycastFilterType.Exclude
+                                    params.FilterDescendantsInstances = {model, Character}
+                                    params.CollisionGroup = "Wall"
+                                    
+                                    local raycastResult = workspace:Raycast(origin, direction, params)
+                                    
+                                    if not raycastResult then
                                         local cframeDoor = doorPart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
                                         EntityMoveTo(model, cframeDoor, config.Movement.Speed)
                                         task.spawn(entity.RunCallback, entity, "OnReachNode", doorPart)
-                                    
+                                        
                                         local delayTime = config.Rebounding.DoorCheckingDelay or 0
                                         if delayTime > 0 then
                                             task.wait(delayTime)
                                         end
+                                        
+                                        doorTargetIndex = doorTargetIndex + 1
                                     end
-                                    doorTargetIndex = doorTargetIndex + 1
-                                end
-                                
-                            -- Phòng không có cửa DoorNormal -> Chạy tuần tự qua các node thông thường
-                            else
-                                for _, nodePart in ipairs(roomNodes) do
-                                    if not entity:IsAlive() then return end
-                                    local cframeNode = nodePart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
-                                    EntityMoveTo(model, cframeNode, config.Movement.Speed)
-                                    if config.Rebounding.DelayEachNode and config.Rebounding.DelayEachNode > 0 then
-                                        task.wait(config.Rebounding.DelayEachNode)
-                                    end
-                                    task.spawn(entity.RunCallback, entity, "OnReachNode", nodePart)
                                 end
                             end
 
-                            checkedRooms[room] = true
+                            local cframeNode = nodePart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
+                            EntityMoveTo(model, cframeNode, config.Movement.Speed)
+                            if config.Rebounding.DelayEachNode and config.Rebounding.DelayEachNode > 0 then
+                                task.wait(config.Rebounding.DelayEachNode)
+                            end
+                            task.spawn(entity.RunCallback, entity, "OnReachNode", nodePart)
                         end
+
+                        while doorNormals[doorTargetIndex] do
+                            if not entity:IsAlive() then return end
+                            local doorModel = doorNormals[doorTargetIndex]
+                            local doorPart = doorModel.PrimaryPart or doorModel:FindFirstChildWhichIsA("BasePart")
+                            if doorPart then
+                                local cframeDoor = doorPart.CFrame + Vector3.new(0, 3 + config.Entity.HeightOffset, 0)
+                                EntityMoveTo(model, cframeDoor, config.Movement.Speed)
+                                task.spawn(entity.RunCallback, entity, "OnReachNode", doorPart)
+                                
+                                local delayTime = config.Rebounding.DoorCheckingDelay or 0
+                                if delayTime > 0 then
+                                    task.wait(delayTime)
+                                end
+                            end
+                            doorTargetIndex = doorTargetIndex + 1
+                        end
+
+                        checkedRooms[room] = true
                     end
                 end
+            end
 
             -- Lá»±a chá»n kiá»ƒu Rebound: AMBUSH hoáº·c BLITZ lá»“ng ghĂ©p DoorChecking
             local reboundType = config.Rebounding.Type:upper()
@@ -1202,19 +1131,9 @@ end
             end
         end
         
-                -- Xử lý điểm cuối vòng lặp di chuyển / Rebound
         model:SetAttribute("Despawning", true)
         task.spawn(entity.RunCallback, entity, "OnDespawning")
-        
-        -- 🔥 Cơ chế Crucifix Old: Đứng im tại chỗ, đợi 30s sau đó mới dọn dẹp (destroy)
-        if model:GetAttribute("CrucifixOld") then
-            model:SetAttribute("Paused", true) -- Ép thực thể đứng im/đơ cứng
-            task.wait(30)                      -- Chờ đủ 30 giây
-        else
-            -- Nếu không phải Crucifix Old (despawn thông thường) thì cho chìm xuống đất rồi xóa
-            EntityMoveTo(model, model:GetPivot() - Vector3.new(0, 300, 0), config.Movement.Speed)
-        end
-        
+        EntityMoveTo(model, model:GetPivot() - Vector3.new(0, 300, 0), config.Movement.Speed)
         entity:Despawn()
     end)
 end
