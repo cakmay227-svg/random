@@ -333,16 +333,24 @@ local function CrucifixEntity(entity: any, tool: Tool)
 		Modules.Main_Game.camShaker:ShakeOnce(15, 15, 0.2, 0.5)
 		
 		-- 2. Xử lý Tool Crucifix: Bắn ra Workspace trước, đợi 1 frame rồi mới Anchored
+				-- 2. Xử lý Tool Crucifix: Bắn ra Workspace, ngắt kết nối với người chơi rồi mới Anchored
 		if tool and tool.Parent then
 			local toolCFrame = tool:GetPivot() -- Lưu lại vị trí chuẩn lúc va chạm
 			
-			-- Bỏ tool ra khỏi Character/Backpack, đưa ra Workspace để rớt khỏi tay player
+			-- Hủy các mối hàn (như Weld, Motor6D) nếu tool đang dính vào Character
+			for _, descendant in ipairs(tool:GetDescendants()) do
+				if descendant:IsA("Weld") or descendant:IsA("Motor6D") or descendant:IsA("JointInstance") then
+					descendant:Destroy()
+				end
+			end
+			
+			-- Bỏ tool ra khỏi Character/Backpack, đưa ra Workspace
 			tool.Parent = workspace
 			
-			-- Đợi 1 frame để character rớt tool và không bị dính người chơi
+			-- Đợi 1 frame để character rớt hẳn tool và server/client đồng bộ hóa
 			RunService.RenderStepped:Wait() 
 			
-			-- Cố định CFrame và khóa cứng (Anchored) ngay tại điểm văng ra
+			-- Gán lại CFrame chuẩn xác và khóa cứng (Anchored) ngay tại điểm văng ra
 			if tool:IsA("Model") then
 				if tool.PrimaryPart then
 					tool:SetPrimaryPartCFrame(toolCFrame)
