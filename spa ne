@@ -1202,9 +1202,19 @@ end
             end
         end
         
+                -- Xử lý điểm cuối vòng lặp di chuyển / Rebound
         model:SetAttribute("Despawning", true)
         task.spawn(entity.RunCallback, entity, "OnDespawning")
-        EntityMoveTo(model, model:GetPivot() - Vector3.new(0, 300, 0), config.Movement.Speed)
+        
+        -- 🔥 Cơ chế Crucifix Old: Đứng im tại chỗ, đợi 30s sau đó mới dọn dẹp (destroy)
+        if model:GetAttribute("CrucifixOld") then
+            model:SetAttribute("Paused", true) -- Ép thực thể đứng im/đơ cứng
+            task.wait(30)                      -- Chờ đủ 30 giây
+        else
+            -- Nếu không phải Crucifix Old (despawn thông thường) thì cho chìm xuống đất rồi xóa
+            EntityMoveTo(model, model:GetPivot() - Vector3.new(0, 300, 0), config.Movement.Speed)
+        end
+        
         entity:Despawn()
     end)
 end
