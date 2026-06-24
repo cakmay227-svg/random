@@ -138,7 +138,8 @@ local CONST = {
 				Enabled = true,
 				Range = 40,
 				Resist = false,
-				Break = true
+				Break = true, 
+				CrucifixType = "Current"
 			},
 			Death = {
 				Type = "Guiding",
@@ -302,6 +303,31 @@ end
 local function CrucifixEntity(entity: any, tool: Tool)
 	local model = entity.Model
 	local config = entity.Config
+	
+	-- 🔥 Kiểm tra xem cấu hình thánh giá đang dùng loại nào
+	local crucifixType = config.Crucifixion.CrucifixType or "Current"
+	
+	if crucifixType == "Old" then
+		-- 🌟 Cấu hình "Old": Chặn damge, rung màn hình, quay đầu về điểm spawn và despawn
+		model:SetAttribute("Damage", false)
+		
+		-- Rung màn hình mạnh 1 phát
+		if Modules.Main_Game and Modules.Main_Game.camShaker then
+			Modules.Main_Game.camShaker:ShakeOnce(15, 15, 0.5, 2.5)
+		end
+		
+		-- Ép thực thể quay đầu chạy ngược về điểm spawn ban đầu
+		config.Movement.Reversed = not config.Movement.Reversed
+		
+		-- Hủy công cụ thánh giá trên tay player
+		if tool and tool.Parent then
+			tool:Destroy()
+		end
+		
+		return
+	end
+	
+	-- 🌟 Cấu hình "Current" (Mặc định giữ nguyên cơ chế gốc của Vynixu)
 	local resist = config.Crucifixion.Resist
 	local toolPivot = tool:GetPivot()
 	local entityPivot = model:GetPivot()
@@ -337,7 +363,7 @@ local function CrucifixEntity(entity: any, tool: Tool)
 	repentance:PivotTo(CFrame.new(result.Position))
 	crucifix.CFrame = toolPivot
 	repentance.Entity.CFrame = entityPivot
-    crucifix.BodyPosition.Position = (RootPart.CFrame * CFrame.new(0.5, 3, -6)).Position
+	crucifix.BodyPosition.Position = (RootPart.CFrame * CFrame.new(0.5, 3, -6)).Position
 	repentance.Parent = workspace
 	sound:Play()
 
@@ -373,12 +399,12 @@ local function CrucifixEntity(entity: any, tool: Tool)
 		waitUntil(2)
 		TweenService:Create(entityPart, TweenInfo.new(3, Enum.EasingStyle.Back, Enum.EasingDirection.In), { CFrame = repentance.Entity.CFrame - Vector3.new(0, 25, 0) }):Play()
 		
-        for _, v in next, model:GetDescendants() do
+		for _, v in next, model:GetDescendants() do
 			if v:IsA("Sound") and not v:GetAttribute("VolumeIgnore") then
-                TweenService:Create(v, TweenInfo.new(3, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Volume = 0 }):Play()
-            end
-        end
-        waitUntil(6.75)
+				TweenService:Create(v, TweenInfo.new(3, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Volume = 0 }):Play()
+			end
+		end
+		waitUntil(6.75)
 	else
 		waitUntil(4)
 		TweenService:Create(crucifix.BodyAngularVelocity, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { AngularVelocity = Vector3.new() }):Play()
