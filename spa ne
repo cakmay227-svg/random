@@ -135,7 +135,7 @@ local CONST = {
 				Range = 40,
 				Resist = false,
 				Break = true, 
-				Type = Old
+				Type = "Current" 
 			},
 			Death = {
 				Type = "Guiding",
