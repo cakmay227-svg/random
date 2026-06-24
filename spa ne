@@ -306,24 +306,29 @@ local function CrucifixEntity(entity: any, tool: Tool)
 	
 	local crucifixType = config.Crucifixion.CrucifixType or "Current"
 	
-	-- Chèn vào phần xử lý Crucifix loại "Old" của bạn:
-if crucifixType == "Old" then
-    model:SetAttribute("Damage", false)
-    model:SetAttribute("BanishedOld", true)
-    
-    -- 🔥 HỦY BỎ các tác vụ Rebound đang chờ sẵn để nó chuyên tâm rút lui
-    config.Rebounding.DoorChecking = false
-    config.Movement.Reversed = true
-    
-    if Modules.Main_Game and Modules.Main_Game.camShaker then
-        Modules.Main_Game.camShaker:ShakeOnce(15, 15, 0.5, 2.5)
-    end
-    
-    if tool and tool.Parent then
-        tool:Destroy()
-    end
-    return
-end
+	if crucifixType == "Old" then
+		model:SetAttribute("Damage", false)
+		model:SetAttribute("BanishedOld", true)
+		
+		-- 🔥 Gỡ trạng thái tạm dừng để thực thể có thể di chuyển lùi về điểm spawn
+		model:SetAttribute("Paused", false)
+		isEntityActive = false -- Ngắt các luồng quét phòng cũ
+		
+		-- Ép đảo ngược hướng di chuyển qua các node
+		config.Movement.Reversed = true
+		
+		-- Rung màn hình mạnh 1 phát
+		if Modules.Main_Game and Modules.Main_Game.camShaker then
+			Modules.Main_Game.camShaker:ShakeOnce(15, 15, 0.5, 2.5)
+		end
+		
+		-- Hủy thánh giá trên tay người chơi
+		if tool and tool.Parent then
+			tool:Destroy()
+		end
+		
+		return
+	end
     
     -- (Giữ nguyên phần code xử lý "Current" bên dưới...)
 	
@@ -1201,7 +1206,9 @@ end
         
         model:SetAttribute("Despawning", true)
         task.spawn(entity.RunCallback, entity, "OnDespawning")
-        EntityMoveTo(model, model:GetPivot() - Vector3.new(0, 300, 0), config.Movement.Speed)
+        if model:GetAttribute("BanishedOld") then
+            EntityMoveTo(model, model:GetPivot() - Vector3.new(0, 300, 0), config.Movement.Speed)
+        end
         entity:Despawn()
     end)
 end
