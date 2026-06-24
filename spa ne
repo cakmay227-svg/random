@@ -300,15 +300,41 @@ local function CrucifixEntity(entity: any, tool: Tool)
 	local model = entity.Model
 	local config = entity.Config
 	local crucifixionConfig = config.Crucifixion
-	local crucifixType = crucifixionConfig.Type or "Current" -- Lấy loại cấu hình[span_1](start_span)[span_1](end_span)
+	local crucifixType = crucifixionConfig.Type or "Current"
 	
-	-- Xử lý chế độ "Old": Thực thể dừng di chuyển, rung màn hình và tự hủy sau 30s[span_2](start_span)[span_2](end_span)
+	-- Xử lý chế độ "Old": Thực thể dừng di chuyển, rung màn hình, hủy tool và tự hủy sau 30s
 	if crucifixType == "Old" then
 		model:SetAttribute("Paused", true)
-		if model.PrimaryPart then model.PrimaryPart.Anchored = true end
 		
-		-- Rung màn hình mạnh 1 phát[span_3](start_span)[span_3](end_span)
+		-- Kiểm tra và tự tạo/gán PrimaryPart nếu model chưa có
+		if not model.PrimaryPart then
+			for _, descendant in ipairs(model:GetDescendants()) do
+				if descendant:IsA("BasePart") then
+					model.PrimaryPart = descendant
+					break
+				end
+			end
+		end
+		
+		-- Khóa cứng (Anchor) PrimaryPart vừa tìm/tạo
+		if model.PrimaryPart then
+			model.PrimaryPart.Anchored = true
+		else
+			-- Dự phòng trường hợp model hoàn toàn không có part nào
+			for _, part in ipairs(model:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.Anchored = true
+				end
+			end
+		end
+		
+		-- Rung màn hình mạnh 1 phát
 		Modules.Main_Game.camShaker:ShakeOnce(15, 15, 0.2, 0.5)
+		
+		-- Hủy tool Crucifix
+		if tool and tool.Parent then
+			tool:Destroy()
+		end
 		
 		task.delay(30, function()
 			if entity:IsAlive() then
@@ -318,7 +344,7 @@ local function CrucifixEntity(entity: any, tool: Tool)
 		return 
 	end
 
-	-- Logic "Current" (Mặc định): Chức năng cũ của script[span_4](start_span)[span_4](end_span)
+	-- Logic "Current" (Mặc định): Chức năng cũ của script
 	local resist = crucifixionConfig.Resist
 	local toolPivot = tool:GetPivot()
 	local entityPivot = model:GetPivot()
