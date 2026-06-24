@@ -306,25 +306,30 @@ local function CrucifixEntity(entity: any, tool: Tool)
 	if crucifixType == "Old" then
 		model:SetAttribute("Paused", true)
 		
-		-- Kiểm tra và tự tạo/gán PrimaryPart nếu model chưa có
+		-- Tự tạo PrimaryPart bằng Instance.new nếu model chưa có
 		if not model.PrimaryPart then
-			for _, descendant in ipairs(model:GetDescendants()) do
-				if descendant:IsA("BasePart") then
-					model.PrimaryPart = descendant
-					break
-				end
-			end
+			local pivotCFrame = model:GetPivot()
+			
+			-- Tạo một Part tàng hình làm mốc định vị trí và cố định
+			local anchorPart = Instance.new("Part")
+			anchorPart.Name = "CustomPrimaryPart"
+			anchorPart.Size = Vector3.new(1, 1, 1)
+			anchorPart.Transparency = 1
+			anchorPart.Anchored = true
+			anchorPart.CanCollide = false
+			anchorPart.CFrame = pivotCFrame
+			anchorPart.Parent = model
+			
+			model.PrimaryPart = anchorPart
+		else
+			-- Nếu đã có PrimaryPart, chỉ cần khóa nó lại
+			model.PrimaryPart.Anchored = true
 		end
 		
-		-- Khóa cứng (Anchor) PrimaryPart vừa tìm/tạo
-		if model.PrimaryPart then
-			model.PrimaryPart.Anchored = true
-		else
-			-- Dự phòng trường hợp model hoàn toàn không có part nào
-			for _, part in ipairs(model:GetDescendants()) do
-				if part:IsA("BasePart") then
-					part.Anchored = true
-				end
+		-- Dự phòng thêm cho mọi BasePart trong model (đề phòng các bộ phận không gắn welded)
+		for _, part in ipairs(model:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.Anchored = true
 			end
 		end
 		
