@@ -68,6 +68,10 @@ local Storage = {
 	}
 }
 
+local SavedClones = {}
+local isEntityActive = true
+local roomsFolder = workspace:WaitForChild("CurrentRooms")
+
 local CONST = {
 	BASE_ENTITY_SPEED = 65,
 	ATTR = {
@@ -599,6 +603,37 @@ local function Earthquake()
     end
 end
 
+local function clonePath(room)
+    if SavedClones[room] then return end
+
+    local nodes = room:FindFirstChild("PathfindNodes")
+    if not nodes then return end
+
+    local clone = nodes:Clone()
+    clone.Name = "PathfindNodes"
+    clone.Parent = room
+
+    SavedClones[room] = clone
+end
+
+local function removeClone(room)
+    if SavedClones[room] then
+        SavedClones[room]:Destroy()
+        SavedClones[room] = nil
+    end
+end
+
+-- 🔥 CHECK CỰC NHANH (Heartbeat level)
+game:GetService("RunService").Heartbeat:Connect(function()
+    if not isEntityActive then return end -- Dừng lặp ngay lập tức nếu thực thể không còn
+    
+    for _, room in ipairs(roomsFolder:GetChildren()) do
+        if not SavedClones[room] then
+            clonePath(room)
+        end
+    end
+end)
+
 for name, value in next, CONST.ATTR.PLAYER do
 	LocalPlayer:SetAttribute(name, value)
 end
@@ -687,8 +722,10 @@ Module.Create = function(self, config: any): any?
         Run = function(self, copyEntity: boolean)
             Module:Run(self, copyEntity)
         end,
-        Despawn = function(self)
+                Despawn = function(self)
             if self:IsAlive() then
+                isEntityActive = false -- 🔥 Vô hiệu hóa vòng lặp Heartbeat ngay khi thực thể despawn
+                
                 self.Model:Destroy()
                 local i = table.find(Module.ActiveEntities, self)
                 if i then
