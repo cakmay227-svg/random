@@ -310,11 +310,13 @@ local function CrucifixEntity(entity: any, tool: Tool)
 		model:SetAttribute("Damage", false)
 		model:SetAttribute("BanishedOld", true)
 		
-		-- 🔥 Gỡ trạng thái tạm dừng để thực thể có thể di chuyển lùi về điểm spawn
+		-- 🔥 Ép thực thể tiếp tục di chuyển (không bị Paused/đứng im)
 		model:SetAttribute("Paused", false)
-		isEntityActive = false -- Ngắt các luồng quét phòng cũ
 		
-		-- Ép đảo ngược hướng di chuyển qua các node
+		-- Kích hoạt cờ ngắt vòng lặp quét phòng tiến tới để chuyển sang trạng thái lùi về
+		model:SetAttribute("CrucifixOld", true) 
+		
+		-- Đảo ngược hướng di chuyển để nó đi lùi qua các node
 		config.Movement.Reversed = true
 		
 		-- Rung màn hình mạnh 1 phát
@@ -1204,12 +1206,20 @@ end
             end
         end
         
-        model:SetAttribute("Despawning", true)
-        task.spawn(entity.RunCallback, entity, "OnDespawning")
-        if model:GetAttribute("BanishedOld") then
-            EntityMoveTo(model, model:GetPivot() - Vector3.new(0, 300, 0), config.Movement.Speed)
-        end
-        entity:Despawn()
+        - 🔥 Chốt chặn: Nếu dính thánh giá Old, lập tức ngắt luồng tiến lên để nó rút lui
+	if model:GetAttribute("CrucifixOld") then
+		break
+	end
+end
+
+-- Sau khi break, script sẽ tự động trôi xuống đoạn despawn:
+model:SetAttribute("Despawning", true)
+task.spawn(entity.RunCallback, entity, "OnDespawning")
+
+-- Lệnh này sẽ ép nó lùi hẳn về điểm spawn/xuống dưới đất trước khi xóa
+EntityMoveTo(model, model:GetPivot() - Vector3.new(0, 300, 0), config.Movement.Speed)
+
+entity:Despawn()
     end)
 end
 
