@@ -304,28 +304,28 @@ local function CrucifixEntity(entity: any, tool: Tool)
 	local model = entity.Model
 	local config = entity.Config
 	
-	-- 🔥 Kiểm tra xem cấu hình thánh giá đang dùng loại nào
 	local crucifixType = config.Crucifixion.CrucifixType or "Current"
 	
-	if crucifixType == "Old" then
-		-- 🌟 Cấu hình "Old": Chặn damge, rung màn hình, quay đầu về điểm spawn và despawn
-		model:SetAttribute("Damage", false)
-		
-		-- Rung màn hình mạnh 1 phát
-		if Modules.Main_Game and Modules.Main_Game.camShaker then
-			Modules.Main_Game.camShaker:ShakeOnce(15, 15, 0.5, 2.5)
-		end
-		
-		-- Ép thực thể quay đầu chạy ngược về điểm spawn ban đầu
-		config.Movement.Reversed = not config.Movement.Reversed
-		
-		-- Hủy công cụ thánh giá trên tay player
-		if tool and tool.Parent then
-			tool:Destroy()
-		end
-		
-		return
-	end
+	-- Chèn vào phần xử lý Crucifix loại "Old" của bạn:
+if crucifixType == "Old" then
+    model:SetAttribute("Damage", false)
+    model:SetAttribute("BanishedOld", true)
+    
+    -- 🔥 HỦY BỎ các tác vụ Rebound đang chờ sẵn để nó chuyên tâm rút lui
+    config.Rebounding.DoorChecking = false
+    config.Movement.Reversed = true
+    
+    if Modules.Main_Game and Modules.Main_Game.camShaker then
+        Modules.Main_Game.camShaker:ShakeOnce(15, 15, 0.5, 2.5)
+    end
+    
+    if tool and tool.Parent then
+        tool:Destroy()
+    end
+    return
+end
+    
+    -- (Giữ nguyên phần code xử lý "Current" bên dưới...)
 	
 	-- 🌟 Cấu hình "Current" (Mặc định giữ nguyên cơ chế gốc của Vynixu)
 	local resist = config.Crucifixion.Resist
@@ -906,7 +906,19 @@ Module.Run = function(self, entity: any, copyEntity: boolean)
             if config.Rebounding.DoorChecking then
                 -- Tính năng DoorChecking tối ưu lồng ghép vào cơ chế Rebound (quay đầu)
                 local function runRoomsCheck(isReversed, checkedRooms)
-                    local rooms = CurrentRooms:GetChildren()
+                    -- Bên trong hàm runRoomsCheck, khi lấy danh sách phòng:
+local rooms = CurrentRooms:GetChildren()
+
+-- 🔥 Nếu đang bị trục xuất kiểu Old, cho phép nó duyệt ngược mảng phòng lại để rút lui về phòng xuất phát
+if model:GetAttribute("BanishedOld") then
+	isReversed = true
+	local reversedRooms = {}
+	for i = #rooms, 1, -1 do
+		table.insert(reversedRooms, rooms[i])
+	end
+	rooms = reversedRooms
+end
+
                     if isReversed then
                         local reversedRooms = {}
                         for i = #rooms, 1, -1 do
