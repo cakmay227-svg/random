@@ -302,50 +302,75 @@ local function CrucifixEntity(entity: any, tool: Tool)
 	local crucifixionConfig = config.Crucifixion
 	local crucifixType = crucifixionConfig.Type or "Current"
 	
-	-- Xử lý chế độ "Old": Thực thể dừng di chuyển, rung màn hình, hủy tool và tự hủy sau 30s
+	-- Xử lý chế độ "Old": Thực thể dừng di chuyển, rung màn hình, văng tool ra ngoài, và tự hủy sau 30s
 	if crucifixType == "Old" then
 		model:SetAttribute("Paused", true)
 		
-		-- Tự tạo PrimaryPart bằng Instance.new nếu model chưa có
+		-- 1. Tự tạo PrimaryPart bằng Instance.new nếu model thực thể chưa có
 		if not model.PrimaryPart then
 			local pivotCFrame = model:GetPivot()
-			
-			-- Tạo một Part tàng hình làm mốc định vị trí và cố định
 			local anchorPart = Instance.new("Part")
-			anchorPart.Name = "CustomPrimaryPart"
-			anchorPart.Size = Vector3.new(1, 1, 1)
-			anchorPart.Transparency = 1
-			anchorPart.Anchored = true
-			anchorPart.CanCollide = false
-			anchorPart.CFrame = pivotCFrame
-			anchorPart.Parent = model
-			
-			model.PrimaryPart = anchorPart
+			localPart.Name = "CustomPrimaryPart"
+			localPart.Size = Vector3.new(1, 1, 1)
+			localPart.Transparency = 1
+			localPart.Anchored = true
+			localPart.CanCollide = false
+			localPart.CFrame = pivotCFrame
+			localPart.Parent = model
+			model.PrimaryPart = localPart
 		else
-			-- Nếu đã có PrimaryPart, chỉ cần khóa nó lại
 			model.PrimaryPart.Anchored = true
 		end
 		
-		-- Dự phòng thêm cho mọi BasePart trong model (đề phòng các bộ phận không gắn welded)
+		-- Dự phòng thêm cho mọi BasePart trong model thực thể
 		for _, part in ipairs(model:GetDescendants()) do
 			if part:IsA("BasePart") then
 				part.Anchored = true
 			end
 		end
 		
-		-- Rung màn hình mạnh 1 phát
-		Modules.Main_Game.camShaker:ShakeOnce(15, 15, 0.2, 0.5)
-		
-		-- Hủy tool Crucifix
+		-- 2. Xử lý lưu vị trí, tách tool Crucifix ra khỏi trang bị người chơi
 		if tool and tool.Parent then
-			tool:Destroy()
+			local toolCFrame = tool:GetPivot() -- Lấy vị trí và góc xoay hiện tại của tool
+			
+			-- Bỏ tool ra khỏi Character/Backpack, đưa ra Workspace
+			tool.Parent = workspace
+			
+			-- Cố định (Anchor) toàn bộ các bộ phận của tool Crucifix tại chỗ
+			tool:SetAttribute("Anchored", true) -- Phòng hờ nếu hệ thống tool có hàm riêng
+			for _, p in ipairs(tool:GetDescendants()) do
+				if p:IsA("BasePart") then
+					p.Anchored = true
+					p.CanCollide = false
+				end
+			end
+			
+			-- Đảm bảo tool nằm chính xác tại CFrame lúc kích hoạt
+			tool:SetPrimaryPartCFrame(toolCFrame)   -- Dùng cho Model Tool
+			-- Nếu tool là một Part đơn lẻ, ta gán CFrame trực tiếp
+			if tool:IsA("Model") and tool.PrimaryPart then
+				tool:SetPrimaryPartCFrame(toolCFrame)
+			elseif tool:IsA("Tool") then
+				for _, c in ipairs(tool:GetChildren()) do
+					if c:IsA("BasePart") then
+						c.CFrame = toolCFrame
+					end
+				end
+			end
+			
+			-- 3. Hủy cả Model Thực thể và Tool Crucifix sau đúng 30 giây
+			task.delay(30, function()
+				if tool and tool.Parent then
+					tool:Destroy()
+				end
+				if entity:IsAlive() then
+					entity:Despawn()
+				end
+			end)
 		end
 		
-		task.delay(30, function()
-			if entity:IsAlive() then
-				entity:Despawn()
-			end
-		end)
+		-- Rung màn hình mạnh 1 phát
+		Modules.Main_Game.camShaker:ShakeOnce(15, 15, 0.2, 0.5)
 		return 
 	end
 
