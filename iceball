@@ -1,0 +1,425 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Debris = game:GetService("Debris")
+local TweenService = game:GetService("TweenService")
+
+local LastAdornee
+local FadeTween
+
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Ice Ball tool made by Guestly",true)
+
+local Player = Players.LocalPlayer
+local Mouse = Player:GetMouse()
+
+---------------------------------------------------
+-- ASSET IDS (TỰ THAY)
+---------------------------------------------------
+
+local TOOL_TEXTURE = "rbxassetid://137890317301029"
+
+local SPAWN_SOUND_ID = "rbxassetid://80080406285191"
+local PROJECTILE_SOUND_ID = "rbxassetid://0"
+local EXPLOSION_SOUND_ID = "rbxassetid://112797079504478"
+
+---------------------------------------------------
+-- TOOL
+---------------------------------------------------
+
+local Tool = Instance.new("Tool")
+Tool.Name = "Ice ball"
+Tool.RequiresHandle = false
+Tool.TextureId = TOOL_TEXTURE
+Tool.Parent = Player.Backpack
+
+---------------------------------------------------
+-- GUI
+---------------------------------------------------
+
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "FireGui"
+Gui.ResetOnSpawn = false
+Gui.Parent = Player:WaitForChild("PlayerGui")
+
+local FireButton = Instance.new("TextButton")
+FireButton.Size = UDim2.new(0, 90, 0, 35)
+FireButton.Position = UDim2.new(1, -120, 0.5, -17)
+FireButton.AnchorPoint = Vector2.new(0, 0)
+FireButton.Text = "Ice"
+FireButton.TextColor3 = Color3.fromRGB(56,199,255)
+FireButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+FireButton.Visible = false
+FireButton.Parent = Gui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 8)
+Corner.Parent = FireButton
+
+---------------------------------------------------
+-- HIGHLIGHT
+---------------------------------------------------
+
+local Highlight = Instance.new("Highlight")
+Highlight.FillColor = Color3.fromRGB(115, 215, 255)
+Highlight.OutlineColor = Color3.fromRGB(0,183,255)
+Highlight.FillTransparency = 0.5
+Highlight.OutlineTransparency = 0
+Highlight.Enabled = false
+Highlight.Parent = Gui
+
+---------------------------------------------------
+-- AIM SYSTEM
+---------------------------------------------------
+
+local Equipped = false
+local CurrentTarget
+local CurrentPart
+
+local function getAimTarget()
+	local cam = workspace.CurrentCamera
+	local viewport = cam.ViewportSize
+
+	local ray = cam:ViewportPointToRay(
+		viewport.X / 2,
+		viewport.Y / 2
+	)
+
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = {
+		Player.Character
+	}
+	params.FilterType = Enum.RaycastFilterType.Blacklist
+
+	local result = workspace:Raycast(
+		ray.Origin,
+		ray.Direction * 1000,
+		params
+	)
+
+	if result then
+		return result.Instance
+	end
+end
+
+RunService.RenderStepped:Connect(function()
+	if not Equipped then
+		if Highlight.Enabled then
+			if FadeTween then
+				FadeTween:Cancel()
+			end
+
+			FadeTween = TweenService:Create(
+				Highlight,
+				TweenInfo.new(1),
+				{
+					FillTransparency = 1,
+					OutlineTransparency = 1
+				}
+			)
+
+			FadeTween:Play()
+			Highlight.Enabled = false
+		end
+		return
+	end
+
+	local hit = getAimTarget()
+
+	if hit and hit:IsA("BasePart") then
+		local target
+
+		if hit.Parent:IsA("Model") then
+			target = hit.Parent
+		else
+			target = hit
+		end
+
+		CurrentPart = hit
+		CurrentTarget = target
+
+		if target ~= LastAdornee then
+			if FadeTween then
+				FadeTween:Cancel()
+			end
+
+			Highlight.Adornee = target
+			Highlight.FillTransparency = 0.5
+			Highlight.OutlineTransparency = 0
+			Highlight.Enabled = true
+
+			LastAdornee = target
+		end
+	else
+		CurrentPart = nil
+		CurrentTarget = nil
+
+		if LastAdornee and Highlight.Enabled then
+			if FadeTween then
+				FadeTween:Cancel()
+			end
+
+			FadeTween = TweenService:Create(
+				Highlight,
+				TweenInfo.new(1),
+				{
+					FillTransparency = 1,
+					OutlineTransparency = 1
+				}
+			)
+
+			FadeTween:Play()
+
+			FadeTween.Completed:Once(function()
+				Highlight.Enabled = false
+				Highlight.Adornee = nil
+				Highlight.FillTransparency = 0.5
+				Highlight.OutlineTransparency = 0
+			end)
+
+			LastAdornee = nil
+		end
+	end
+end)
+
+---------------------------------------------------
+-- FIRE FUNCTION
+---------------------------------------------------
+
+local Camera = workspace.CurrentCamera
+
+local function shakeScreen(explosionPos)
+	local Character = Player.Character
+	if not Character then
+		return
+	end
+
+	local Root = Character:FindFirstChild("HumanoidRootPart")
+	if not Root then
+		return
+	end
+
+	local distance = (Root.Position - explosionPos).Magnitude
+	local maxDistance = 80
+
+	if distance > maxDistance then
+		return
+	end
+
+	local strength = 1 - (distance / maxDistance)
+
+	local magnitude = 1.5 * strength
+	local duration = 2 -- rung trong 2 giây
+
+	local start = tick()
+	local conn
+
+	conn = RunService.RenderStepped:Connect(function()
+		if not Camera.Parent then
+			conn:Disconnect()
+			return
+		end
+
+		local elapsed = tick() - start
+		if elapsed >= duration then
+			conn:Disconnect()
+			return
+		end
+
+		-- giảm dần từ 1 -> 0
+		local fade = 1 - (elapsed / duration)
+
+		local t = tick() * 25
+
+		local offset = Vector3.new(
+			math.noise(t, 0, 0),
+			math.noise(0, t, 0),
+			0
+		) * magnitude * fade
+
+		Camera.CFrame *= CFrame.new(offset)
+	end)
+end
+
+local function fireProjectile()
+
+	local char = Player.Character
+	if not char then return end
+
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+
+	local ray = Camera:ViewportPointToRay(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+	local targetPos = ray.Origin + ray.Direction * 1000
+
+	-------------------------------------------------
+	-- [1] BALL + LIGHT (DÁN ĐẦU TIÊN)
+	-------------------------------------------------
+
+	local Ball = Instance.new("Part")
+	Ball.Shape = Enum.PartType.Ball
+	Ball.Material = Enum.Material.Neon
+	Ball.Color = Color3.fromRGB(66,195,255)
+	Ball.Size = Vector3.new(3,3,3)
+	Ball.Anchored = true
+	Ball.CanCollide = false
+	Ball.CFrame = root.CFrame
+	Ball.Parent = workspace
+	
+	local SpawnSound = Instance.new("Sound")
+SpawnSound.SoundId = SPAWN_SOUND_ID
+SpawnSound.Volume = 1
+SpawnSound.Parent = Ball
+SpawnSound:Play()
+
+Debris:AddItem(SpawnSound, 3)
+
+	local Light = Instance.new("PointLight")
+	Light.Color = Color3.fromRGB(0,229,255)
+	Light.Range = 15
+	Light.Brightness = 2
+	Light.Parent = Ball
+
+	-------------------------------------------------
+	-- [2] SOUND
+	-------------------------------------------------
+
+	local FlySound = Instance.new("Sound")
+	FlySound.SoundId = PROJECTILE_SOUND_ID
+	FlySound.Looped = true
+	FlySound.Parent = Ball
+	FlySound:Play()
+
+	-------------------------------------------------
+	-- [3] TWEEN BAY
+	-------------------------------------------------
+
+	local distance = (targetPos - Ball.Position).Magnitude
+	local speed = 18
+	local tweenTime = distance / speed
+
+	local tween = TweenService:Create(
+		Ball,
+		TweenInfo.new(tweenTime, Enum.EasingStyle.Linear),
+		{ Position = targetPos }
+	)
+
+	tween:Play()
+
+	-------------------------------------------------
+	-- [4] HIT SYSTEM (GIỮ NGUYÊN KHỐI NÀY)
+	-------------------------------------------------
+
+	local Hit = false
+	local lastPos = Ball.Position
+
+	local conn
+	conn = RunService.Heartbeat:Connect(function()
+
+		if not Ball.Parent then
+			conn:Disconnect()
+			return
+		end
+
+		local newPos = Ball.Position
+		local dir = newPos - lastPos
+
+		if dir.Magnitude > 0 then
+
+			local params = RaycastParams.new()
+			params.FilterDescendantsInstances = {char, Ball}
+			params.FilterType = Enum.RaycastFilterType.Blacklist
+
+			local result = workspace:Raycast(lastPos, dir, params)
+
+			if result and not Hit then
+				Hit = true
+				conn:Disconnect()
+				FlySound:Stop()
+
+				-------------------------------------------------
+				-- [5] FREEZE OBJECT (DÁN NGAY CHỖ NÀY)
+				-------------------------------------------------
+
+				local part = result.Instance
+				local model = part:FindFirstAncestorOfClass("Model")
+
+				if model then
+					for _, v in ipairs(model:GetDescendants()) do
+						if v:IsA("BasePart") then
+							v.Material = Enum.Material.Ice
+							v.Color = Color3.fromRGB(110,214,255)
+
+							local smoke = Instance.new("Smoke")
+							smoke.Color = Color3.fromRGB(110,214,255)
+							smoke.Opacity = 0.4
+							smoke.RiseVelocity = 2
+							smoke.Size = 6
+							smoke.Parent = v
+						end
+					end
+				elseif part:IsA("BasePart") then
+					part.Material = Enum.Material.Ice
+					part.Color = Color3.fromRGB(110,214,255)
+
+					local smoke = Instance.new("Smoke")
+					smoke.Color = Color3.fromRGB(110,214,255)
+					smoke.Opacity = 0.4
+					smoke.RiseVelocity = 2
+					smoke.Size = 6
+					smoke.Parent = part
+				end
+				
+				local Boom = Instance.new("Sound")
+Boom.SoundId = EXPLOSION_SOUND_ID
+Boom.Volume = 1
+Boom.Parent = Ball
+Boom.RollOffMaxDistance = 80
+Boom.RollOffMinDistance = 1
+Boom:Play()
+
+Debris:AddItem(Boom, 3)
+
+				-------------------------------------------------
+				-- [6] BALL EFFECT (DÁN SAU FREEZE)
+				-------------------------------------------------
+
+				TweenService:Create(Ball, TweenInfo.new(0.8), {
+					Transparency = 1,
+					Size = Ball.Size * 3
+				}):Play()
+
+				TweenService:Create(Light, TweenInfo.new(0.8), {
+					Range = 40,
+					Brightness = 6
+				}):Play()
+
+				task.delay(0.9, function()
+					if Ball then
+						Ball:Destroy()
+					end
+				end)
+			end
+		end
+
+		lastPos = newPos
+	end)
+end
+
+---------------------------------------------------
+-- EQUIP
+---------------------------------------------------
+
+Tool.Equipped:Connect(function()
+	Equipped = true
+	FireButton.Visible = true
+end)
+
+Tool.Unequipped:Connect(function()
+	Equipped = false
+	FireButton.Visible = false
+	Highlight.Enabled = false
+end)
+
+FireButton.MouseButton1Click:Connect(function()
+	fireProjectile()
+end)
