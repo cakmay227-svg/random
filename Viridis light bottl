@@ -1,4 +1,5 @@
 local TweenService_upvr = game:GetService("TweenService")
+local TweenService = game:GetService("TweenService")
 local MainUI_upvr = nil
 if not game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") then repeat wait() until game.Players.LocalPlayer.PlayerGui:FindFirstChild("MainUI") end
 MainUI_upvr = game.Players.LocalPlayer.PlayerGui.MainUI
@@ -10,6 +11,7 @@ else
 end
 local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
 local drinked = false
+local CollisionLoopRunning = true
 local ended = false
 newCloneEffect.Name = "GuidingLightPotion"
 newCloneEffect.Visible = false
@@ -42,9 +44,17 @@ local potionLight = Instance.new("PointLight")
 potionLight.Name = "ViridisLight"
 potionLight.Color = Color3.fromRGB(0,255,0)
 potionLight.Brightness = 2
-potionLight.Range = 45
+potionLight.Range = 0
 potionLight.Shadows = false
 potionLight.Parent = RootPart
+
+TweenService:Create(
+	potionLight,
+	TweenInfo.new(2.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+	{
+		Range = 45
+	}
+):Play()
 
 local Camera = workspace.CurrentCamera
 local Collision
@@ -76,21 +86,35 @@ Collision = Character:FindFirstChild("CollisionPart")
     CollisionClone.Parent = Character
     
     task.spawn(function()
-        while Character.Parent do
-            if RootPart.Anchored then
-                CollisionClone.Massless = true
-                repeat task.wait() until not RootPart.Anchored
-                task.wait(0.15)
-            else
-                CollisionClone.Massless = not CollisionClone.Massless
-            end
-            task.wait(0.24)
-        end
-    end)
+	while Character.Parent and CollisionLoopRunning do
+		if RootPart.Anchored then
+			CollisionClone.Massless = true
+			repeat
+				task.wait()
+			until not RootPart.Anchored or not CollisionLoopRunning
+
+			if not CollisionLoopRunning then
+				break
+			end
+
+			task.wait(0.15)
+		else
+			CollisionClone.Massless = not CollisionClone.Massless
+		end
+
+		task.wait(0.24)
+	end
+end)
     
     local viridis = Instance.new("Sound", workspace) 
     viridis.SoundId = "rbxassetid://140242540481244" 
     viridis.Volume = 1.2
+    
+    local ambience = Instance.new("Sound", workspace) 
+    ambience.SoundId = "rbxassetid://1841950508" 
+    ambience.Volume = 1
+    ambience.Looped = true
+    ambience:Play()
     
 					local Workspace = game:GetService("Workspace")
 
@@ -234,8 +258,8 @@ local originalWalkSpeed = humanoid.WalkSpeed
 local speedConn
 speedConn = RunService.Heartbeat:Connect(function()
 	if humanoid and humanoid.Parent then
-		if humanoid.WalkSpeed ~= 20 then
-			humanoid.WalkSpeed = 20
+		if humanoid.WalkSpeed ~= 17 then
+			humanoid.WalkSpeed = 17
 		end
 	end
 end)
@@ -255,14 +279,14 @@ label.BackgroundTransparency = 1
 label.TextColor3 = Color3.fromRGB(170, 255, 180)
 label.TextStrokeTransparency = 0.6
 label.Font = Enum.Font.Gotham
-label.TextSize = 18
-label.Text = "2:00"
+label.TextSize = 20
+label.Text = "1:00"
 label.Parent = gui
 
 -- =========================
 -- ⏱ TIMER LOGIC
 -- =========================
-local timeLeft = 120
+local timeLeft = 60
 
 local function formatTime(t)
 	local m = math.floor(t / 60)
@@ -318,6 +342,8 @@ viridis:Play()
     viridis.Ended:Connect(function()
     viridis:Destroy() 
     end) 
+    
+    ambience:Destroy() 
 
 -- =========================
 -- ⏳ COUNTDOWN LOOP
@@ -330,6 +356,13 @@ task.spawn(function()
 		stopRegen()
 		stopHighlights() 
 			restore()
+			
+			CollisionLoopRunning = false
+
+if CollisionClone then
+	CollisionClone:Destroy()
+end
+
 			break
 		end
 
@@ -406,6 +439,7 @@ toolNew.Activated:Connect(function()
 	if drinked == false then
 		drinked = true
 		EffectOnScreen()
+
 		if game.GameId == 6627207668 then
 			ohhmydayz2:Play()
 			ohhmydayz2.Ended:Wait()
