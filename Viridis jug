@@ -8,6 +8,7 @@ local speedTweenValue = Instance.new("NumberValue", StarJug)
 
 local durability = 4
 local debounce = false
+local CollisionLoopRunning = true
 StarJug:SetAttribute("Durability", durability)
 
 local MainUI_upvr = nil
@@ -190,6 +191,11 @@ StarJug.Activated:Connect(function()
     viridis.SoundId = "rbxassetid://133977339172345" 
     viridis.Volume = 1.5
     
+    local ambience = Instance.new("Sound", workspace) 
+    ambience.SoundId = "rbxassetid://1841950508" 
+    ambience.Volume = 1
+    ambience:Play()
+    
     viridis:Play()
     
     viridis.Ended:Connect(function()
@@ -209,52 +215,6 @@ StarJug.Activated:Connect(function()
         StarJug:Destroy()
     end
    
-   task.spawn(function() 
-   local Lighting = game:GetService("Lighting")
-local TweenService = game:GetService("TweenService")
-
--- Save config gốc
-local Original = {
-    Brightness = Lighting.Brightness,
-    ClockTime = Lighting.ClockTime,
-    FogEnd = Lighting.FogEnd,
-    OutdoorAmbient = Lighting.OutdoorAmbient,
-    Ambient = Lighting.Ambient,
-}
-
-local OriginalGlobalShadows = Lighting.GlobalShadows
-
--- Bật Full Bright
-Lighting.Brightness = 2
-Lighting.ClockTime = 14
-Lighting.FogEnd = 100000
-Lighting.GlobalShadows = false
-Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-
--- Chờ 35 giây
-task.wait(35)
-
--- Tween về config gốc
-local tween = TweenService:Create(
-    Lighting,
-    TweenInfo.new(2, Enum.EasingStyle.Linear),
-    {
-        Brightness = Original.Brightness,
-        ClockTime = Original.ClockTime,
-        FogEnd = Original.FogEnd,
-        OutdoorAmbient = Original.OutdoorAmbient,
-        Ambient = Original.Ambient,
-    }
-)
-
-tween:Play()
-
--- GlobalShadows không tween được nên đặt lại sau khi tween xong
-tween.Completed:Wait()
-Lighting.GlobalShadows = OriginalGlobalShadows
-end) 
-   
    task.spawn(function()
     if getgenv().ViridislightRunning2 then
 	return
@@ -264,6 +224,29 @@ getgenv().ViridislightRunning2 = true
 				local Character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
+
+local potionLight = RootPart:FindFirstChild("ViridisJugLight")
+
+if potionLight then
+	potionLight:Destroy()
+end
+
+potionLight = Instance.new("PointLight")
+potionLight.Name = "ViridisJugLight"
+potionLight.Color = Color3.fromRGB(0,255,0)
+potionLight.Brightness = 3
+potionLight.Range = 0
+potionLight.Shadows = false
+potionLight.Parent = RootPart
+
+TweenService:Create(
+	potionLight,
+	TweenInfo.new(2.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+	{
+		Range = 90
+	}
+):Play()
+
 local Camera = workspace.CurrentCamera
 local Collision
 
@@ -294,17 +277,25 @@ Collision = Character:FindFirstChild("CollisionPart")
     CollisionClone.Parent = Character
     
     task.spawn(function()
-        while Character.Parent do
-            if RootPart.Anchored then
-                CollisionClone.Massless = true
-                repeat task.wait() until not RootPart.Anchored
-                task.wait(0.15)
-            else
-                CollisionClone.Massless = not CollisionClone.Massless
-            end
-            task.wait(0.24)
-        end
-    end) 
+	while Character.Parent and CollisionLoopRunning do
+		if RootPart.Anchored then
+			CollisionClone.Massless = true
+			repeat
+				task.wait()
+			until not RootPart.Anchored or not CollisionLoopRunning
+
+			if not CollisionLoopRunning then
+				break
+			end
+
+			task.wait(0.15)
+		else
+			CollisionClone.Massless = not CollisionClone.Massless
+		end
+
+		task.wait(0.24)
+	end
+end)
     
 					local Workspace = game:GetService("Workspace")
 
@@ -443,24 +434,13 @@ local humanoid = char:WaitForChild("Humanoid")
 local originalWalkSpeed = humanoid.WalkSpeed
 
 -- =========================
--- ðŸŒ¿ COLOR CORRECTION EFFECT
--- =========================
-local cc = Instance.new("ColorCorrectionEffect")
-cc.Name = "GreenWorldEffect"
-cc.Saturation = 0.2
-cc.Contrast = 0.1
-cc.Brightness = 0.05
-cc.TintColor = Color3.fromRGB(74, 255, 92)
-cc.Parent = Lighting
-
--- =========================
 -- ðŸƒ FORCE SPEED 25
 -- =========================
 local speedConn
 speedConn = RunService.Heartbeat:Connect(function()
 	if humanoid and humanoid.Parent then
-		if humanoid.WalkSpeed ~= 22 then
-			humanoid.WalkSpeed = 22
+		if humanoid.WalkSpeed ~= 18 then
+			humanoid.WalkSpeed = 18
 		end
 	end
 end)
@@ -499,20 +479,29 @@ end
 -- ðŸ”„ RESTORE SYSTEM
 -- =========================
 local function restore()
-	-- remove color correction with fade feel
-	TweenService:Create(cc, TweenInfo.new(2), {
-		TintColor = Color3.fromRGB(255, 255, 255),
-		Saturation = 0,
-		Contrast = 0,
-		Brightness = 0
-	}):Play()
 	
 	getgenv().ViridislightRunning2 = false
 
-	task.delay(2, function()
-		if cc then cc:Destroy() end
+local potionLight = RootPart:FindFirstChild("ViridisJugLight")
+
+if potionLight and potionLight.Parent then
+	local lightTween = TweenService:Create(
+		potionLight,
+		TweenInfo.new(4),
+		{
+			Range = 0
+		}
+	)
+
+	lightTween:Play()
+
+	lightTween.Completed:Connect(function()
+		if potionLight then
+			potionLight:Destroy()
+		end
 	end)
-	
+end
+
 	if speedConn then
 	speedConn:Disconnect()
 end
@@ -540,8 +529,14 @@ task.spawn(function()
 		stopRegen()
 		stopHighlights() 
 			restore()
+			ambience:Destroy() 
 			
 			newCloneEffect.Visible = false
+			CollisionLoopRunning = false
+
+if CollisionClone then
+	CollisionClone:Destroy()
+end
 			break
 		end
 
