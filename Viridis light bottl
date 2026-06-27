@@ -37,6 +37,15 @@ getgenv().ViridislightRunning = true
 				local Character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
+
+local potionLight = Instance.new("PointLight")
+potionLight.Name = "ViridisLight"
+potionLight.Color = Color3.fromRGB(0,255,0)
+potionLight.Brightness = 2
+potionLight.Range = 45
+potionLight.Shadows = false
+potionLight.Parent = RootPart
+
 local Camera = workspace.CurrentCamera
 local Collision
 
@@ -220,17 +229,6 @@ local humanoid = char:WaitForChild("Humanoid")
 local originalWalkSpeed = humanoid.WalkSpeed
 
 -- =========================
--- 🌿 COLOR CORRECTION EFFECT
--- =========================
-local cc = Instance.new("ColorCorrectionEffect")
-cc.Name = "GreenWorldEffect"
-cc.Saturation = 0.2
-cc.Contrast = 0.1
-cc.Brightness = 0.05
-cc.TintColor = Color3.fromRGB(74, 255, 92)
-cc.Parent = Lighting
-
--- =========================
 -- 🏃 FORCE SPEED 25
 -- =========================
 local speedConn
@@ -276,21 +274,28 @@ end
 -- 🔄 RESTORE SYSTEM
 -- =========================
 local function restore()
-	-- remove color correction with fade feel
-	TweenService:Create(cc, TweenInfo.new(2), {
-		TintColor = Color3.fromRGB(255, 255, 255),
-		Saturation = 0,
-		Contrast = 0,
-		Brightness = 0
-	}):Play()
 	
 	getgenv().ViridislightRunning = false
 	
-	newCloneEffect.Visible = false
+	if potionLight and potionLight.Parent then
+	local lightTween = TweenService:Create(
+		potionLight,
+		TweenInfo.new(2),
+		{
+			Range = 0
+		}
+	)
 
-	task.delay(2, function()
-		if cc then cc:Destroy() end
+	lightTween:Play()
+
+	lightTween.Completed:Connect(function()
+		if potionLight then
+			potionLight:Destroy()
+		end
 	end)
+end
+	
+	newCloneEffect.Visible = false
 	
 	if speedConn then
 	speedConn:Disconnect()
