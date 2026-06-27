@@ -209,6 +209,52 @@ StarJug.Activated:Connect(function()
         StarJug:Destroy()
     end
    
+   task.spawn(function() 
+   local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+
+-- Save config gốc
+local Original = {
+    Brightness = Lighting.Brightness,
+    ClockTime = Lighting.ClockTime,
+    FogEnd = Lighting.FogEnd,
+    OutdoorAmbient = Lighting.OutdoorAmbient,
+    Ambient = Lighting.Ambient,
+}
+
+local OriginalGlobalShadows = Lighting.GlobalShadows
+
+-- Bật Full Bright
+Lighting.Brightness = 2
+Lighting.ClockTime = 14
+Lighting.FogEnd = 100000
+Lighting.GlobalShadows = false
+Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+
+-- Chờ 35 giây
+task.wait(35)
+
+-- Tween về config gốc
+local tween = TweenService:Create(
+    Lighting,
+    TweenInfo.new(2, Enum.EasingStyle.Linear),
+    {
+        Brightness = Original.Brightness,
+        ClockTime = Original.ClockTime,
+        FogEnd = Original.FogEnd,
+        OutdoorAmbient = Original.OutdoorAmbient,
+        Ambient = Original.Ambient,
+    }
+)
+
+tween:Play()
+
+-- GlobalShadows không tween được nên đặt lại sau khi tween xong
+tween.Completed:Wait()
+Lighting.GlobalShadows = OriginalGlobalShadows
+end) 
+   
    task.spawn(function()
     if getgenv().ViridislightRunning2 then
 	return
