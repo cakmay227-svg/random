@@ -1,0 +1,485 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
+
+local function getParticlesOut(model)
+	for _, v in ipairs(model:GetDescendants()) do
+		if v.Name == "ParticlesOut" then
+			return v
+		end
+	end
+	return nil
+end
+
+-- =========================
+-- HANDLE TOOL RETURN LOGIC
+-- =========================
+
+local function returnToolToPlayer(toolInstance, model)
+	if not toolInstance then return end
+
+	-- reset ParticleEmitter texture trong model
+	if model then
+		for _, obj in ipairs(model:GetDescendants()) do
+			if obj:IsA("ParticleEmitter") and obj.Name == "Item" then
+				obj.Texture = "rbxassetid://0"
+				obj.Enabled = false
+			end
+		end
+	end
+
+	-- đảm bảo tool sống lại đúng nơi
+	task.defer(function()
+		if toolInstance and toolInstance.Parent then
+			toolInstance.Parent = workspace
+		end
+	end)
+end
+
+local function allowedParticles(name)
+	return name == "Explosion"
+		or name == "RiftLines"
+		or name == "RiftLines2"
+end
+
+local rolling = false
+
+local function startRolling(model)
+	rolling = true
+
+	task.spawn(function()
+		local angles = {0, 90, 180, 270}
+		local i = 1
+
+		while rolling and model and model.Parent do
+			local cf = model:GetPivot()
+
+			model:PivotTo(
+				CFrame.new(cf.Position) * CFrame.Angles(0, math.rad(angles[i]), 0)
+			)
+
+			i = (i % 4) + 1
+			task.wait(0.05)
+		end
+	end)
+end
+
+local function stopRolling()
+	rolling = false
+end
+
+local SOUND_START = "https://github.com/cakmay227-svg/random/raw/refs/heads/main/XRecorder_Edited_20260628_02.mp3?raw=true"
+local SOUND_HIT   = "https://github.com/cakmay227-svg/random/raw/refs/heads/main/XRecorder_Edited_20260628_03.mp3?raw=true"
+
+local function playGitSound(model, url, name, volume)
+	local function GitAud(soundgit, filename)
+		local FileName = filename
+		writefile(FileName..".mp3", game:HttpGet(soundgit))
+		return (getcustomasset or getsynasset)(FileName..".mp3")
+	end
+
+	local sound = Instance.new("Sound")
+	sound.SoundId = GitAud(url, name)
+	sound.Parent = workspace
+	sound.Name = name
+	sound.Volume = volume or 2
+	sound:Play()
+
+	return sound
+end
+
+local candleBusy = false
+
+local TweenService = game:GetService("TweenService")
+
+local CANDLE_TEXTURE = "rbxassetid://96340766601824"
+
+local function runCandleScript(model)
+	local info = TweenInfo.new(2)
+
+	for _, obj in ipairs(model:GetDescendants()) do
+		if obj:IsA("MeshPart") then
+			continue
+		end
+
+		if obj:IsA("PointLight") then
+			continue
+		end
+
+		if obj:IsA("BasePart") then
+			TweenService:Create(obj, info, {
+				Transparency = 1
+			}):Play()
+		elseif obj:IsA("Decal") then
+			TweenService:Create(obj, info, {
+				Transparency = 1
+			}):Play()
+		end
+	end
+
+	local sound = model:FindFirstChild("Mischievous", true)
+
+	if sound then
+		TweenService:Create(sound, info, {
+			PlaybackSpeed = 0
+		}):Play()
+	end
+	
+	task.delay(2, function()
+	if model and model.Parent then
+		model:Destroy()
+	end
+end)
+end
+
+local function playParticlesOnce(folder)
+	if not folder then return 0 end
+
+	local allowed = {
+		Explosion = true,
+		RiftLines = true,
+		RiftLines2 = true
+	}
+
+	local longest = 0
+
+	for _, v in ipairs(folder:GetDescendants()) do
+		if v:IsA("ParticleEmitter") and allowed[v.Name] then
+
+			v.Enabled = false
+
+			local amount = v:GetAttribute("EmitCount") or 20
+			v:Emit(amount)
+
+			local t = v.Lifetime.Max + (v:GetAttribute("EmitDelay") or 0)
+			if t > longest then
+				longest = t
+			end
+		end
+	end
+
+	return longest
+end
+
+local function getEquippedTool()
+	local char = player.Character
+	if not char then return nil end
+
+	for _, obj in ipairs(char:GetChildren()) do
+		if obj:IsA("Tool") then
+			return obj
+		end
+	end
+	return nil
+end
+
+local function handlePrompt(model, prompt)
+
+	local debounce = false
+
+	prompt.Triggered:Connect(function()
+	if debounce then return end
+	debounce = true
+
+	local tool = getEquippedTool()
+	local storedTool = model:GetAttribute("StoredTool")
+
+	-- reset helper
+	local function unlock()
+		debounce = false
+	end
+
+if storedTool == "Candle" then
+	if candleBusy then
+		unlock()
+		return
+	end
+
+	candleBusy = true
+
+	task.spawn(function()
+	
+	if prompt and prompt.Parent then
+	prompt:Destroy()
+end
+	
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Functions.lua"))()
+    local tool = LoadCustomInstance("rbxassetid://85952423139523")
+    tool.Parent = game:GetService("Players").LocalPlayer.Backpack
+    tool.Animations.idle.AnimationId = "rbxassetid://10479585177"
+    
+    local storedToolName = model:GetAttribute("StoredTool")
+
+local toolInstance =
+	player.Backpack:FindFirstChild(storedToolName)
+	or player.Character and player.Character:FindFirstChild(storedToolName)
+	or workspace:FindFirstChild(storedToolName)
+
+if storedToolName then
+	local toolInstance =
+		player.Backpack:FindFirstChild(storedToolName)
+		or player.Character and player.Character:FindFirstChild(storedToolName)
+		or workspace:FindFirstChild(storedToolName)
+
+	if toolInstance then
+		returnToolToPlayer(toolInstance, model)
+	end
+end
+    
+    local info = TweenInfo.new(2)
+		
+		local misch = model.PrimaryPart:FindFirstChild("Mischievous", true)
+
+if misch and misch:IsA("Sound") then
+	TweenService:Create(misch, TweenInfo.new(3), {
+		PlaybackSpeed = 0
+	}):Play()
+end
+
+		-- 1. fade out model (trừ MeshPart + PointLight)
+		for _, obj in ipairs(model:GetDescendants()) do
+			if obj:IsA("MeshPart") then continue end
+			if obj:IsA("PointLight") then continue end
+
+			if obj:IsA("BasePart") then
+				TweenService:Create(obj, info, {Transparency = 1}):Play()
+			elseif obj:IsA("Decal") then
+				TweenService:Create(obj, info, {Transparency = 1}):Play()
+			elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") then
+				obj.Enabled = false
+			end
+		end
+	
+	task.wait(3.5)
+		
+				-- 💀 DESTROY MODEL
+		-- 🌀 START ROLL AFTER ALL EFFECTS DONE
+if not rolling then
+	rolling = true
+
+	startRolling(model)
+end
+
+		-- 🔊 SOUND 1 (WAIT FINISH)
+		local sound1 = playGitSound(model, SOUND_START, "CandleStart", 2)
+		sound1.Ended:Wait()
+
+		-- =========================
+		-- ⛔ CHỈ SAU KHI SOUND 1 XONG
+		-- =========================
+
+-- 💀 INSTANT HIDE ALL OBJECTS (NO TWEEN)
+for _, obj in ipairs(model:GetDescendants()) do
+
+	if obj:IsA("MeshPart") then
+		continue
+	end
+
+	if obj:IsA("PointLight") then
+		continue
+	end
+
+	if obj:IsA("BasePart") then
+		obj.Transparency = 1
+
+	elseif obj:IsA("Decal") then
+		obj.Transparency = 1
+
+	elseif obj:IsA("ParticleEmitter") then
+		obj.Enabled = false
+
+	elseif obj:IsA("Trail") then
+		obj.Enabled = false
+
+	elseif obj:IsA("Beam") then
+		obj.Enabled = false
+
+	elseif obj:IsA("Sound") and obj.Name ~= "Mischievous" then
+		obj.Volume = 0
+		obj.Playing = false
+	end
+end
+
+stopRolling()
+
+		-- 💀 DAMAGE
+		local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum:TakeDamage(50)
+		end
+
+task.spawn(function() 
+		-- 🔊 SOUND 2
+		playGitSound(model, SOUND_HIT, "CandleHit", 2)
+		end) 
+
+		-- 💥 PARTICLES OUT (PLAY FULL)
+		local particlesOut = getParticlesOut(model)
+
+		local maxTime = 0
+
+if particlesOut then
+	for _, v in ipairs(particlesOut:GetDescendants()) do
+		if v:IsA("ParticleEmitter") and allowedParticles(v.Name) then
+
+			v:Emit(v:GetAttribute("EmitCount") or 50)
+
+			local t = v.Lifetime.Max + (v:GetAttribute("EmitDelay") or 0)
+			if t > maxTime then
+				maxTime = t
+			end
+		end
+	end
+end
+
+		-- ⏳ WAIT PARTICLES FINISH
+		task.wait(maxTime + 0.2)
+
+model:Destroy()
+candleBusy = false
+debounce = false
+
+		candleBusy = false
+	end)
+
+	return
+end
+
+if not tool then
+	debounce = false
+	return
+end
+
+		-- =========================
+	-- 🔥 LẦN 1: consume tool
+		-- =========================
+
+			local item =
+	model:FindFirstChild("StarCenter")
+	and model.StarCenter:FindFirstChild("ItemHolder")
+	and model.StarCenter.ItemHolder:FindFirstChild("Item")
+
+if tool.Name == "Candle" then
+	model:SetAttribute("StoredTool", "Candle")
+	model:SetAttribute("StoredTexture", CANDLE_TEXTURE)
+
+	if item and item:IsA("ParticleEmitter") then
+		item.Texture = CANDLE_TEXTURE
+	end
+else
+	local tex = tool.TextureId
+
+	model:SetAttribute("StoredTool", tool.Name)
+	model:SetAttribute("StoredTexture", tex)
+
+	if item and item:IsA("ParticleEmitter") then
+	item.Texture = tex
+	item.Enabled = true
+	item:Emit(5)
+end
+end
+
+local particlesOut = getParticlesOut(model)
+playParticlesOnce(particlesOut)
+debounce = false
+return
+	end)
+end
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+-- FIX + CLEAN MODEL
+local function sanitizeModel(model)
+	if not model:IsA("Model") then return end
+
+	for _, v in ipairs(model:GetDescendants()) do
+
+
+		if v:IsA("BasePart") then
+			v.Anchored = true
+			v.CanCollide = false
+		end
+		
+		-- PROMPT ONLY
+		if v:IsA("ProximityPrompt") then
+			v.HoldDuration = 3
+			v.MaxActivationDistance = 8
+			v.Style = Enum.ProximityPromptStyle.Custom
+			v:SetAttribute("CustomFrame", "Black")
+
+			handlePrompt(model, v) -- 👈 QUAN TRỌNG NHẤT
+		end
+	end
+
+	local pp = model:FindFirstChildWhichIsA("BasePart", true)
+	if pp then model.PrimaryPart = pp end
+
+	model:PivotTo(model:GetPivot())
+end
+
+-- spawn logic
+local function spawnNearRift()
+
+	local objs = game:GetObjects("rbxassetid://110852226869313")
+	local model = objs[1]
+	model.Name = "Mischievous Rift" 
+	model:ScaleTo(1.3)
+model:SetAttribute("StoredTexture", "")
+model:SetAttribute("StoredTool", "")
+
+	if not model then
+		warn("failed to load model -_-")
+		return
+	end
+	
+	model.Parent = workspace
+
+	sanitizeModel(model)
+
+	-- vị trí trước mặt RiftSpawn
+
+local room = workspace.CurrentRooms
+	:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value)
+
+if room and room:FindFirstChild("Parts")
+	and room.Parts:FindFirstChild("Floor") then
+
+	local floor = room.Parts.Floor
+
+	-- VỊ TRÍ CỐ ĐỊNH TRÊN FLOOR
+	local offsetX = 0
+local offsetZ = 0
+
+model:PivotTo(
+	floor.CFrame * CFrame.new(offsetX, 5.5, offsetZ)
+)
+end
+
+task.spawn(function() 
+		function GitAud(soundgit,filename)
+			local url = soundgit
+			local FileName = filename
+			writefile(FileName..".mp3", game:HttpGet(url))
+			return (getcustomasset or getsynasset)(FileName..".mp3")
+		end
+
+		soundRef = Instance.new("Sound")
+		soundRef.SoundId = GitAud(
+			"https://github.com/cakmay227-svg/random/raw/refs/heads/main/XRecorder_Edited_20260628_01.mp3?raw=true",
+			"Blaa"
+		)
+		soundRef.Parent = model.PrimaryPart
+		soundRef.Name = "Mischievous"
+		soundRef.Looped = true
+		soundRef.RollOffMaxDistance = 75
+		soundRef.RollOffMinDistance = 1
+		soundRef.Volume = 2
+		soundRef.RollOffMode = Enum.RollOffMode.InverseTapered
+soundRef.EmitterSize = 5
+		soundRef:Play()
+	end)
+end
+
+spawnNearRift()
