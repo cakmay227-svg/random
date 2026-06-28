@@ -360,7 +360,7 @@ local function restore()
 	getgenv().GlitchlightRunning = false
 	
 	newCloneEffect.Visible = false
-stopEntityLoop()
+stopWarningSystem()
     stopScreenGlitchLoop()
     
     if activeSpot then
