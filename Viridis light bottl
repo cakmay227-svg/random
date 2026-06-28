@@ -342,8 +342,6 @@ viridis:Play()
     viridis.Ended:Connect(function()
     viridis:Destroy() 
     end) 
-    
-    ambience:Destroy() 
 
 -- =========================
 -- ⏳ COUNTDOWN LOOP
@@ -356,6 +354,7 @@ task.spawn(function()
 		stopRegen()
 		stopHighlights() 
 			restore()
+ambience:Destroy() 
 			
 			CollisionLoopRunning = false
 
