@@ -12,31 +12,6 @@ local function getParticlesOut(model)
 	return nil
 end
 
--- =========================
--- HANDLE TOOL RETURN LOGIC
--- =========================
-
-local function returnToolToPlayer(toolInstance, model)
-	if not toolInstance then return end
-
-	-- reset ParticleEmitter texture trong model
-	if model then
-		for _, obj in ipairs(model:GetDescendants()) do
-			if obj:IsA("ParticleEmitter") and obj.Name == "Item" then
-				obj.Texture = "rbxassetid://0"
-				obj.Enabled = false
-			end
-		end
-	end
-
-	-- đảm bảo tool sống lại đúng nơi
-	task.defer(function()
-		if toolInstance and toolInstance.Parent then
-			toolInstance.Parent = workspace
-		end
-	end)
-end
-
 local function allowedParticles(name)
 	return name == "Explosion"
 		or name == "RiftLines"
@@ -209,24 +184,6 @@ end
     tool.Parent = game:GetService("Players").LocalPlayer.Backpack
     tool.Animations.idle.AnimationId = "rbxassetid://10479585177"
     
-    local storedToolName = model:GetAttribute("StoredTool")
-
-local toolInstance =
-	player.Backpack:FindFirstChild(storedToolName)
-	or player.Character and player.Character:FindFirstChild(storedToolName)
-	or workspace:FindFirstChild(storedToolName)
-
-if storedToolName then
-	local toolInstance =
-		player.Backpack:FindFirstChild(storedToolName)
-		or player.Character and player.Character:FindFirstChild(storedToolName)
-		or workspace:FindFirstChild(storedToolName)
-
-	if toolInstance then
-		returnToolToPlayer(toolInstance, model)
-	end
-end
-    
     local info = TweenInfo.new(2)
 		
 		local misch = model.PrimaryPart:FindFirstChild("Mischievous", true)
@@ -379,6 +336,8 @@ else
 	item:Emit(5)
 end
 end
+
+tool:Destroy()
 
 local particlesOut = getParticlesOut(model)
 playParticlesOnce(particlesOut)
