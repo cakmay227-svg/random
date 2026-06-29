@@ -4,6 +4,7 @@ local player = Players.LocalPlayer
 local TOOL_TEXTURES = {
 	["Viridislight Bottle"] = "rbxassetid://79634613812234",
 	["Viridislight Jug"] = "rbxassetid://76643684989182"
+	["Viridislight Vial"] = "rbxassetid://83697244024585"
 }
 
 local function getParticlesOut(model)
@@ -72,6 +73,11 @@ local function runToolScript(toolName)
 		task.spawn(function()
 			loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/glitcu%20jug"))()
 		end)
+		
+		elseif toolName == "Viridislight Vial" then
+		task.spawn(function()
+			loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/glitch%20vial"))()
+		end)
 	end
 end
 
@@ -128,7 +134,8 @@ if not model:GetAttribute("UsedOnce") then
 
 	local valid =
 		tool.Name == "Viridislight Bottle"
-		or tool.Name == "Viridislight Jug"
+		or tool.Name == "Viridislight Jug" 
+		or tool.Name == "Viridislight Vial"
 
 	if not valid then
 		debounce = false
