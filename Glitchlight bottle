@@ -9,7 +9,7 @@ local toolNew = nil
 if game.GameId == 6627207668 then
 	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
 else
-	toolNew = game:GetObjects("rbxassetid://106070375280557")[1]
+	toolNew = game:GetObjects("rbxassetid://87684833746948")[1]
 end
 local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
 local drinked = false
@@ -494,71 +494,4 @@ toolNew.Activated:Connect(function()
 		end
 		toolNew:Destroy()
 	end
-end)
-
--- 🔥 SHIFT BLUE RANGE → GREEN (giữ độ sáng)
-local function shiftToPurple(color)
-	local h, s, v = color:ToHSV()
-
-	return Color3.fromHSV(
-		270 / 360, -- tím
-		s,
-		v -- gi  sáng
-	)
-end
-
--- xá»­ lÃ½ ColorSequence (Particle / Trail / Beam / Gradient)
-local function shiftSequence(seq)
-	local newKeypoints = {}
-
-	for _, k in ipairs(seq.Keypoints) do
-		table.insert(
-			newKeypoints,
-			ColorSequenceKeypoint.new(
-				k.Time,
-				shiftToPurple(k.Value)
-			)
-		)
-	end
-
-	return ColorSequence.new(newKeypoints)
-end
-
--- main processor
-local function process(inst)
-
-	-- BasePart
-	if inst:IsA("BasePart") then
-		inst.Color = shiftToPurple(inst.Color)
-	end
-
-	-- VFX
-	if inst:IsA("ParticleEmitter")
-	or inst:IsA("Trail")
-	or inst:IsA("Beam") then
-		inst.Color = shiftSequence(inst.Color)
-	end
-
-	-- Light
-	if inst:IsA("PointLight")
-	or inst:IsA("SpotLight")
-	or inst:IsA("SurfaceLight") then
-		inst.Color = shiftToPurple(inst.Color)
-	end
-
-	-- UIGradient
-	if inst:IsA("UIGradient") then
-		inst.Color = shiftSequence(inst.Color)
-	end
-end
-
--- apply toàn tool
-for _, v in ipairs(toolNew:GetDescendants()) do
-    process(v)
-end
-
--- auto update nếu spawn thêm effect
-toolNew.DescendantAdded:Connect(function(v)
-    task.wait()
-    process(v)
 end)
