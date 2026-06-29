@@ -2,7 +2,7 @@
 
 local TweenService_upvr = game:GetService("TweenService")
 local TweenService = game:GetService("TweenService")
-local StarJug = game:GetObjects("rbxassetid://119885581324516")[1]
+local StarJug = game:GetObjects("rbxassetid://111416928476581")[1]
 
 local speedTweenValue = Instance.new("NumberValue", StarJug)
 
@@ -23,89 +23,6 @@ newCloneEffect.Parent = MainUI_upvr.MainFrame.Healthbar.Effects
 StarJug.Parent = game.Players.LocalPlayer.Backpack
 StarJug.Name = "Viridislight Jug" 
 StarJug.TextureId = "rbxassetid://116348863545754" 
-
--- ðŸŒŸ SHIFT YELLOW RANGE â†’ GREEN (giá»¯ Ä‘á»™ sÃ¡ng)
-local function shiftYellowToGreen(color)
-	local h, s, v = color:ToHSV()
-
-	-- khoáº£ng mÃ u vÃ ng (~40Â° â†’ 75Â°)
-	local isYellowRange =
-		h >= (40 / 360)
-		and h <= (75 / 360)
-		and s > 0.2
-
-	if isYellowRange then
-		-- Ä‘á»•i sang xanh lÃ¡ nhÆ°ng giá»¯ Ä‘á»™ Ä‘áº­m vÃ  Ä‘á»™ sÃ¡ng
-		return Color3.fromHSV(
-			120 / 360, -- xanh lÃ¡
-			s,
-			v
-		)
-	end
-
-	return color
-end
-
--- xá»­ lÃ½ ColorSequence (Particle / Trail / Beam / Gradient)
-local function shiftSequence(seq)
-	local newKeypoints = {}
-
-	for _, k in ipairs(seq.Keypoints) do
-		table.insert(
-			newKeypoints,
-			ColorSequenceKeypoint.new(
-				k.Time,
-				shiftYellowToGreen(k.Value)
-			)
-		)
-	end
-
-	return ColorSequence.new(newKeypoints)
-end
-
--- main processor
-local function process(inst)
-
-	-- BasePart
-	if inst:IsA("BasePart") then
-		if inst.Name == "Liquid" then
-			-- chá»‰ Ä‘á»•i náº¿u Liquid Ä‘ang lÃ  mÃ u vÃ ng
-			inst.Color = shiftYellowToGreen(inst.Color)
-		else
-			inst.Color = shiftYellowToGreen(inst.Color)
-		end
-	end
-
-	-- VFX
-	if inst:IsA("ParticleEmitter")
-	or inst:IsA("Trail")
-	or inst:IsA("Beam") then
-		inst.Color = shiftSequence(inst.Color)
-	end
-
-	-- Light
-	if inst:IsA("PointLight")
-	or inst:IsA("SpotLight")
-	or inst:IsA("SurfaceLight") then
-		inst.Color = shiftYellowToGreen(inst.Color)
-	end
-
-	-- GUI Gradient
-	if inst:IsA("UIGradient") then
-		inst.Color = shiftSequence(inst.Color)
-	end
-end
-
--- apply toÃ n tool
-for _, v in ipairs(StarJug:GetDescendants()) do
-	process(v)
-end
-
--- auto update náº¿u spawn thÃªm effect
-StarJug.DescendantAdded:Connect(function(v)
-	task.wait()
-	process(v)
-end)
 
 local function EffectOnScreen()
 	newCloneEffect.Visible = true
