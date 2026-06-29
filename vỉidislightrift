@@ -10,7 +10,7 @@ local function sanitizeModel(model)
 	for _, v in ipairs(model:GetDescendants()) do
 
 		workspace["viridis pentagram"].StarCenter.ItemHolder.Item.Enabled = true
-		workspace["viridis pentagram"].StarCenter.ItemHolder.Item.Texture = "rbxassetid://72724972461305" 
+		workspace["viridis pentagram"].StarCenter.ItemHolder.Item.Texture = "rbxassetid://75123291506988" 
 
 		-- ❌ xóa BeamFlat / BeamGlow
 		if v:IsA("Beam") and (v.Name == "BeamFlat" or v.Name == "BeamGlow") then
@@ -108,6 +108,7 @@ end
 
 safeLoad("https://raw.githubusercontent.com/Not-Guestly/Scripts/main/Viridislight-Bottle")
 safeLoad("https://raw.githubusercontent.com/Not-Guestly/Scripts/main/Viridislight-Jug")
+safeLoad("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/viridis%20vial")
 
 				local parentModel = model
 				v:Destroy() -- ❌ xóa prompt ngay
