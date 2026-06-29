@@ -3,7 +3,7 @@ local player = Players.LocalPlayer
 
 local TOOL_TEXTURES = {
 	["Viridislight Bottle"] = "rbxassetid://79634613812234",
-	["Viridislight Jug"] = "rbxassetid://76643684989182"
+	["Viridislight Jug"] = "rbxassetid://76643684989182", 
 	["Viridislight Vial"] = "rbxassetid://83697244024585"
 }
 
