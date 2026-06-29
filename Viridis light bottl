@@ -7,7 +7,7 @@ local toolNew = nil
 if game.GameId == 6627207668 then
 	toolNew = game.ReplicatedStorage["Moon Bottle"]:Clone()
 else
-	toolNew = game:GetObjects("rbxassetid://106070375280557")[1]
+	toolNew = game:GetObjects("rbxassetid://111263531009426")[1]
 end
 local newCloneEffect = MainUI_upvr.MainFrame.Healthbar.Effects.HerbGreenEffect:Clone()
 local drinked = false
@@ -448,85 +448,4 @@ toolNew.Activated:Connect(function()
 		end
 		toolNew:Destroy()
 	end
-end)
-
--- 🔥 SHIFT BLUE RANGE → GREEN (giữ độ sáng)
-local function shiftBlueToGreen(color)
-    local h, s, v = color:ToHSV()
-
-    local isBlueRange =
-        (h >= 0.25 and h <= 0.85)
-
-    if isBlueRange then
-        -- 🌿 xanh lá nhạt (pastel green)
-        local newH = 0.33
-
-        local newS = math.clamp(s * 0.35, 0, 1) -- giảm saturation mạnh → nhạt
-        local newV = math.clamp(v * 1.15, 0.9, 1) -- đẩy sáng lên → pastel glow
-
-        return Color3.fromHSV(newH, newS, newV)
-    end
-
-    return color
-end
-
--- xử lý ColorSequence (Particle / Trail / Beam / Gradient)
-local function shiftSequence(seq)
-    local keypoints = seq.Keypoints
-    local newKeypoints = {}
-
-    for i, k in ipairs(keypoints) do
-        table.insert(newKeypoints,
-            ColorSequenceKeypoint.new(
-                k.Time,
-                shiftBlueToGreen(k.Value)
-            )
-        )
-    end
-
-    return ColorSequence.new(newKeypoints)
-end
-
--- main processor
-local function process(inst)
-
-    -- BasePart
-    if inst:IsA("BasePart") then
-        if inst.Name == "Liquid" then
-            -- xanh lá hẳn
-            inst.Color = Color3.fromRGB(0, 255, 0)
-        else
-            -- xanh lá pastel
-            inst.Color = shiftBlueToGreen(inst.Color)
-        end
-    end
-
-    -- VFX
-    if inst:IsA("ParticleEmitter") or inst:IsA("Trail") or inst:IsA("Beam") then
-        inst.Color = shiftSequence(inst.Color)
-    end
-
-    -- Light
-    if inst:IsA("PointLight") or inst:IsA("SpotLight") or inst:IsA("SurfaceLight") then
-        inst.Color = shiftBlueToGreen(inst.Color)
-    end
-
-    -- GUI Gradient
-    if inst:IsA("UIGradient") then
-        local seq = inst.Color
-        if seq and seq.Keypoints then
-            inst.Color = shiftSequence(seq)
-        end
-    end
-end
-
--- apply toàn tool
-for _, v in ipairs(toolNew:GetDescendants()) do
-    process(v)
-end
-
--- auto update nếu spawn thêm effect
-toolNew.DescendantAdded:Connect(function(v)
-    task.wait()
-    process(v)
 end)
