@@ -466,7 +466,7 @@ function drinkSoundPlay()
 end
 
 toolNew.Parent = game.Players.LocalPlayer.Backpack
-toolNew.Name = "Glitchlight Bottle" 
+toolNew.Name = "Glitchlight Vial" 
 toolNew.TextureId = "rbxassetid://83697244024585" 
 
 toolNew.Equipped:Connect(function()
