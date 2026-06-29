@@ -2,7 +2,7 @@
 
 local TweenService_upvr = game:GetService("TweenService")
 local TweenService = game:GetService("TweenService")
-local StarJug = game:GetObjects("rbxassetid://119885581324516")[1]
+local StarJug = game:GetObjects("rbxassetid://82169595372806")[1]
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
@@ -235,74 +235,6 @@ newCloneEffect.Image = "rbxassetid://95707198060965"
 StarJug.Parent = game.Players.LocalPlayer.Backpack
 StarJug.Name = "Glitchlight Jug" 
 StarJug.TextureId = "rbxassetid://76643684989182" 
-
--- ðŸŒŸ SHIFT YELLOW RANGE â†’ GREEN (giá»¯ Ä‘á»™ sÃ¡ng)
---  SHIFT ANY COLOR  PURPLE (gi  sáng + saturation)
-local function shiftToPurple(color)
-	local h, s, v = color:ToHSV()
-
-	return Color3.fromHSV(
-		270 / 360, -- tím
-		s,
-		v -- gi  sáng
-	)
-end
-
--- xá»­ lÃ½ ColorSequence (Particle / Trail / Beam / Gradient)
-local function shiftSequence(seq)
-	local newKeypoints = {}
-
-	for _, k in ipairs(seq.Keypoints) do
-		table.insert(
-			newKeypoints,
-			ColorSequenceKeypoint.new(
-				k.Time,
-				shiftToPurple(k.Value)
-			)
-		)
-	end
-
-	return ColorSequence.new(newKeypoints)
-end
-
--- main processor
-local function process(inst)
-
-	-- BasePart
-	if inst:IsA("BasePart") then
-		inst.Color = shiftToPurple(inst.Color)
-	end
-
-	-- VFX
-	if inst:IsA("ParticleEmitter")
-	or inst:IsA("Trail")
-	or inst:IsA("Beam") then
-		inst.Color = shiftSequence(inst.Color)
-	end
-
-	-- Light
-	if inst:IsA("PointLight")
-	or inst:IsA("SpotLight")
-	or inst:IsA("SurfaceLight") then
-		inst.Color = shiftToPurple(inst.Color)
-	end
-
-	-- UIGradient
-	if inst:IsA("UIGradient") then
-		inst.Color = shiftSequence(inst.Color)
-	end
-end
-
--- apply toÃ n tool
-for _, v in ipairs(StarJug:GetDescendants()) do
-	process(v)
-end
-
--- auto update náº¿u spawn thÃªm effect
-StarJug.DescendantAdded:Connect(function(v)
-	task.wait()
-	process(v)
-end)
 
 local function EffectOnScreen()
 	newCloneEffect.Visible = true
