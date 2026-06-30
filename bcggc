@@ -19,7 +19,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Events")
 local URSpecialEffects = Remotes:WaitForChild("URSpecialEffects")
 
 local EntityConfig = {
-    AssetId = "rbxassetid://123",
+    AssetId = "rbxassetid://71148476112454",
     MoveSpeed = 40,
     HitboxRadius = 50,
     ShakeRadius = 100,
@@ -161,8 +161,6 @@ local activeShaker = initializeBypassedShaker()
 local function loadEntityModel()
     local objects = game:GetObjects(EntityConfig.AssetId)
     local model = objects[1]
-
-    assert(model, "[EntitySystem] Không load được AssetId: " .. tostring(EntityConfig.AssetId))
 
     model.Parent = Workspace
 
