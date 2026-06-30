@@ -25,6 +25,7 @@ local EntityConfig = {
     ShakeRadius = 100,
     DamageAmount = 10,        -- Lượng máu mất khi tóm (không chết ngay)
     KillDamage = 100,         -- Lượng máu mất khi giết
+    InstantKill = false,
     
     YOffset = Vector3.new(0, 4, 0),
     DespawnYOffset = Vector3.new(0, 30, 0),
@@ -198,7 +199,7 @@ end
 local despawnEntity
 
 -- =====================================================================
--- KILL / JUMPSCARE EXECUTION (ĐỒNG BỘ MÁU & LOOP UI CHẾT CÓ ĐIỀU KIỆN)
+-- KILL / JUMPSCARE EXECUTION (ÁP DỤNG CẤU HÌNH INSTANTKILL)
 -- =====================================================================
 local function executeJumpscare()
     local damageRemote = ReplicatedStorage:FindFirstChild("LocalDamage", true) or ReplicatedStorage:FindFirstChild("ChangeHealth", true)
@@ -213,16 +214,15 @@ local function executeJumpscare()
         local cleanText = string.gsub(healthText, "[^%d]", "")
         local currentHealth = tonumber(cleanText) or 100
         
-        -- Kiểm tra nếu lượng máu nhỏ hơn hoặc bằng sát thương tóm -> Player chết hẳn do damage kết liễu
-        if currentHealth <= EntityConfig.DamageAmount then
+        -- Kiểm tra điều kiện InstantKill hoặc lượng máu tự nhiên đã <= sát thương tóm
+        if EntityConfig.InstantKill or currentHealth <= EntityConfig.DamageAmount then
             EntityConfig.OnKillPlayer() -- Kích hoạt callback khi kill
             
             -- Gửi lệnh đồng bộ sát thương trừ và thanh máu
             damageRemote:FireServer(EntityConfig.KillDamage, "SittingItOut", 1, nil)
             damageRemote:FireServer("Damage", EntityConfig.KillDamage)
-            print("[ENTITY] Player đã bị kết liễu hoàn toàn với damage:", EntityConfig.KillDamage)
             
-            -- Kích hoạt vòng lặp ghi đè UI (0.5s) khi player bị chết hẳn do cú damage kết liễu
+            -- Kích hoạt vòng lặp ghi đè UI (0.5s) khi player bị chết
             pcall(function()
                 task.spawn(function()
                     while true do
@@ -241,14 +241,13 @@ local function executeJumpscare()
                 entityModel:Destroy() 
             end
         else
-            -- Phần else: Chỉ tóm và trừ một phần máu
+            -- Trường hợp InstantKill = false: Chỉ tóm và trừ một phần máu
             EntityConfig.OnDamagePlayer() -- Kích hoạt script riêng khi tóm & gây damage
             
             local damageAmount = EntityConfig.DamageAmount
             damageRemote:FireServer("Damage", damageAmount)
-            print("[ENTITY] Thực thể tóm và gây sát thương một phần máu:", damageAmount)
             
-            -- Kiểm tra máu còn lại sau khi ăn damage, nếu tụt về <= 0 thì mới chạy loop UI chết phòng game gốc đè UI
+            -- Kiểm tra máu còn lại sau khi ăn damage, nếu tụt về <= 0 thì mới chạy loop UI chết phòng game gốc đè
             if (currentHealth - damageAmount) <= 0 then
                 pcall(function()
                     task.spawn(function()
