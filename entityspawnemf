@@ -245,7 +245,10 @@ local function executeJumpscare()
             EntityConfig.OnDamagePlayer() -- Kích hoạt script riêng khi tóm & gây damage
             
             local damageAmount = EntityConfig.DamageAmount
+            damageRemote:FireServer(damageAmount, "SittingItOut", 1, nil)
             damageRemote:FireServer("Damage", damageAmount)
+            
+            task.wait(2)
             
             -- Kiểm tra máu còn lại sau khi ăn damage, nếu tụt về <= 0 thì mới chạy loop UI chết phòng game gốc đè
             if (currentHealth - damageAmount) <= 0 then
