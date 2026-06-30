@@ -213,7 +213,8 @@ local function executeJumpscare()
             
             -- Gán UI màn hình chết tùy chỉnh theo config truyền vào
             pcall(function()
-            while true do(0.5)
+            while true do
+            task.wait(0.5)
                 local playerGui = game.Players.LocalPlayer.PlayerGui
                 playerGui.Main.AfterDeath.Document.EntityPage.DeathFrame.Entities.Button.ImageLabel.Image = EntityConfig.DeathImage
                 playerGui.Main.AfterDeath.Document.EntityPage.DeathFrame.EntityName.Text = EntityConfig.DeathName
@@ -591,6 +592,8 @@ end
 local function traverseNodes(nodesFolder)
     local path = extractPathNodes(nodesFolder)
     if #path == 0 then return end
+    
+    EntityConfig.OnMoveStart() -- Kích hoạt script bắt đầu di chuyển
 
 if not entityModel:GetAttribute("Spawned") then  
     entityModel:PivotTo(path[1].CFrame + EntityConfig.YOffset)  
@@ -616,8 +619,6 @@ end
             local distance = offset.Magnitude  
 
             if distance <= EntityConfig.Tolerance then break end  
-            
-            EntityConfig.OnMoveStart() -- Kích hoạt script bắt đầu di chuyển
             
             if roomModel then  
     applyRoomEffects(roomModel, rootPart.Position)
