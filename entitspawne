@@ -19,7 +19,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Events")
 local URSpecialEffects = Remotes:WaitForChild("URSpecialEffects")
 
 local EntityConfig = {
-    AssetId = "rbxassetid://0",
+    AssetId = "rbxassetid://123",
     MoveSpeed = 40,
     HitboxRadius = 50,
     ShakeRadius = 100,
@@ -157,8 +157,12 @@ local activeShaker = initializeBypassedShaker()
 -- LOAD & ENTITY SETUP
 -- =====================================================================
 local function loadEntityModel()
-    local model = game:GetObjects(EntityConfig.AssetId)[1]
-    model.Parent = Workspace
+    local objects = game:GetObjects(EntityConfig.AssetId)
+local model = objects[1]
+
+assert(model, "[EntitySystem] Không load được AssetId: " .. tostring(EntityConfig.AssetId))
+
+model.Parent = Workspace
 
     if not model.PrimaryPart then  
         local firstPart = model:FindFirstChildWhichIsA("BasePart", true)  
@@ -256,10 +260,12 @@ proximityConnection = RunService.RenderStepped:Connect(function()
         return 
     end
     
-    if not rootPart or not rootPart.Parent then 
+if not rootPart or not rootPart.Parent then
+    if despawnEntity then
         despawnEntity()
-        return 
     end
+    return
+end
     
     local character = Player.Character
     local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -275,9 +281,9 @@ proximityConnection = RunService.RenderStepped:Connect(function()
 
             -- Trong phần xét khoảng cách (distance <= EntityConfig.ShakeRadius):
 if EntityConfig.EnableShake then
-    if not isShaking then
-        isShaking = true
-        activeShaker._camShakeInstances = {}
+    if not isShaking and activeShaker then
+    isShaking = true
+    activeShaker._camShakeInstances = {}
         
         local newInstance = {  
             ["Magnitude"] = dynamicMagnitude,  
@@ -294,10 +300,12 @@ if EntityConfig.EnableShake then
         }  
         table.insert(activeShaker._camShakeInstances, newInstance)
     else
-        for _, inst in ipairs(activeShaker._camShakeInstances) do
-            inst.Magnitude = dynamicMagnitude
-            inst.Roughness = dynamicRoughness
-        end
+        if activeShaker then
+    for _, inst in ipairs(activeShaker._camShakeInstances) do
+        inst.Magnitude = dynamicMagnitude
+        inst.Roughness = dynamicRoughness
+    end
+end
     end
 end
 
