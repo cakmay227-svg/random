@@ -1,0 +1,14 @@
+local Notify = loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/Pressure-ACHIEVEMENT"))()
+
+Notify({
+	Text = "Fought A Beast And Survived. Survive WH1T3.",
+	TextColor = Color3.fromRGB(255,0,0),
+	BorderColor = Color3.fromRGB(255,0,0),
+	Icon = "rbxassetid://100801611123508",
+
+	Sound = game.Players.LocalPlayer.PlayerGui.Main.BadgePopup.BadgePopupBase.AudAchievement,
+
+	StayTime = 5,
+	ShowTweenTime = 1,
+	HideTweenTime = 1,
+})
