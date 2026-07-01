@@ -214,19 +214,60 @@ end
 local activeShaker = initializeBypassedShaker()
 
 -- =====================================================================
--- LOAD & ENTITY SETUP
+-- LOAD & ENTITY SETUP (SỬ DỤNG GETOBJECTS)
 -- =====================================================================
 local function loadEntityModel()
-    local objects = game:GetObjects(EntityConfig.AssetId)
-    local model = objects[1]
+    -- Kiểm tra AssetId
+    if not EntityConfig.AssetId or EntityConfig.AssetId == "" then
+        warn("[EntitySystem] AssetId chưa được thiết lập!")
+        return nil
+    end
+
+    local assetUrl = EntityConfig.AssetId
+    if not assetUrl:find("rbxassetid://") then
+        assetUrl = "rbxassetid://" .. assetUrl
+    end
+
+    local model
+    local success, objects = pcall(function()
+        return game:GetObjects(assetUrl)
+    end)
+
+    if not success or not objects or #objects == 0 then
+        warn("[EntitySystem] Không thể tải model: " .. tostring(objects))
+        return nil
+    end
+
+    model = objects[1]
+    
+    -- Nếu không phải Model, bọc nó vào Model
+    if not model:IsA("Model") then
+        local wrapper = Instance.new("Model")
+        wrapper.Name = "EntityModel"
+        model.Parent = wrapper
+        model = wrapper
+    end
+
+    -- CHỨC NĂNG MỚI: TỰ TẠO PRIMARYPART NẾU KHÔNG CÓ
+    if not model.PrimaryPart then
+        local firstPart = model:FindFirstChildWhichIsA("BasePart", true)
+        
+        if firstPart then
+            model.PrimaryPart = firstPart
+        else
+            -- Nếu trong model hoàn toàn không có part nào, tạo mới 1 part
+            local fallbackPart = Instance.new("Part")
+            fallbackPart.Name = "PrimaryPartFallback"
+            fallbackPart.Transparency = 1
+            fallbackPart.CanCollide = false
+            fallbackPart.Size = Vector3.new(2, 2, 2)
+            fallbackPart.Parent = model
+            model.PrimaryPart = fallbackPart
+            warn("[EntitySystem] Không tìm thấy BasePart, đã tự tạo PrimaryPart mới.")
+        end
+    end
 
     model.Parent = Workspace
-
-    if not model.PrimaryPart then  
-        local firstPart = model:FindFirstChildWhichIsA("BasePart", true)  
-        assert(firstPart, "[EntitySystem] Model không có BasePart hợp lệ.")  
-        model.PrimaryPart = firstPart  
-    end  
     return model
 end
 
