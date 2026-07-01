@@ -2,6 +2,7 @@ local spawnEntity = loadstring(game:HttpGet("https://raw.githubusercontent.com/c
 
 spawnEntity({
     AssetId = "rbxassetid://17071491370",
+    EntityName = "Smiler",
     MoveSpeed = 890,
     HitboxRadius = 90,
     ShakeRadius = 100,
