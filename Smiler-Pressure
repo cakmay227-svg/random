@@ -1,0 +1,243 @@
+local spawnEntity = loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/L%20test"))()
+
+spawnEntity({
+    AssetId = "rbxassetid://17071491370",
+    MoveSpeed = 890,
+    HitboxRadius = 90,
+    ShakeRadius = 100,
+    DamageAmount = 100,    
+    InstantKill = true,
+    ConstantBloodSucking = false,
+    DelayEachDamage = 0.1,
+    
+    DelayWhenSpawned = true,     
+    Delay = 20, 
+    Rebounding = true,      
+    Rebounds = 20,
+    Reversed = true,
+    DelayEachRebound = 0,
+    
+    YOffset = Vector3.new(0, 2, 0),
+    DespawnYOffset = Vector3.new(0, 30, 0),
+    Tolerance = 0.1,
+    FlickerSpeed = 75,
+    MaxDarkness = 0.2,
+    ShakeIntensity = 2.5,
+    ShakeSpeedMultiplier = 1.5,
+    LightFlickerTime = 10,       
+    
+    EnableFlicker = true,
+    EnableShake = true,
+    EnableBlackout = true,
+    EnableBreakLights = true,
+    
+    GithubSound = "",         
+    PlayGitSoundWhenSpawned = false, 
+    SoundVolume = 1,        
+    SoundPlaybackSpeed = 1,      
+    
+    DeathImage = "rbxassetid://11417375410",
+    DeathName = "Smiler",
+    DeathNotes = "I Rember that smile…",
+    DeathImageColor = Color3.fromRGB(255, 255, 255), -- Mặc định là trắng (giữ nguyên màu ảnh)
+    
+    OnSpawn = function() end,
+    OnMoveStart = function() end,
+    OnRoomEnter = function(roomName) end,
+    OnDamagePlayer = function() end,
+    OnKillPlayer = function()
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+--// SERVICES
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
+--// REMOVE OLD GUI
+pcall(function()
+	if CoreGui:FindFirstChild("JumpscareGui") then
+		CoreGui.JumpscareGui:Destroy()
+	end
+end)
+
+--// LOAD SOUND
+local function loadSound(data)
+	local sound = Instance.new("Sound")
+	local id = tostring(data[1])
+	local props = data[2] or {}
+
+	for k, v in pairs(props) do
+		if k ~= "SoundId" and k ~= "Parent" then
+			sound[k] = v
+		end
+	end
+
+	if id:find("rbxasset://") then
+		sound.SoundId = id
+	else
+		sound.SoundId = "rbxassetid://" .. id:gsub("%D", "")
+	end
+
+	sound.Parent = workspace
+	return sound
+end
+
+--// CONFIG (BẠN CÓ THỂ CHỈNH)
+local config = {
+	Image1 = "rbxassetid://11417375410",
+	Image2 = "rbxassetid://11417375410",
+
+	Shake = true,
+
+	Sound1 = {0, {Volume = 10}},
+	Sound2 = {80686090832850, {Volume = 10}},
+
+	Flashing = {
+		true,
+		Color3.fromRGB(255, 0, 0)
+	},
+
+	Tease = {
+		true,
+		Min = 1,
+		Max = 3
+	}
+}
+
+--// CREATE GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "JumpscareGui"
+gui.IgnoreGuiInset = true
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = CoreGui
+
+local bg = Instance.new("Frame")
+bg.Size = UDim2.new(1, 0, 1, 0)
+bg.BackgroundColor3 = Color3.new(0, 0, 0)
+bg.BorderSizePixel = 0
+bg.BackgroundTransparency = 0
+bg.ZIndex = 999
+bg.Parent = gui
+
+local face = Instance.new("ImageLabel")
+face.AnchorPoint = Vector2.new(0.5, 0.5)
+face.Position = UDim2.new(0.5, 0, 0.5, 0)
+face.Size = UDim2.new(0, 150, 0, 150)
+face.BackgroundTransparency = 1
+face.Image = config.Image1
+face.ResampleMode = Enum.ResamplerMode.Pixelated
+face.Parent = bg
+
+--// SIZES
+local screenY = gui.AbsoluteSize.Y
+local minSize = screenY / 5
+local maxSize = screenY / 2.5
+
+--// TEASE
+local sound1, sound2
+if config.Sound1 then sound1 = loadSound(config.Sound1) end
+if config.Sound2 then sound2 = loadSound(config.Sound2) end
+
+if config.Tease and config.Tease[1] then
+	local loops = math.random(config.Tease.Min, config.Tease.Max)
+	if sound1 then sound1:Play() end
+
+	for _ = 1, loops do
+		task.wait(math.random(10, 20) / 100)
+		local grow = (maxSize - minSize) / loops
+		face.Size = face.Size + UDim2.new(0, grow, 0, grow)
+	end
+end
+
+--// FLASHING
+if config.Flashing and config.Flashing[1] then
+	task.spawn(function()
+		while gui.Parent do
+			bg.BackgroundColor3 = config.Flashing[2]
+			task.wait(math.random(25, 100) / 1000)
+			bg.BackgroundColor3 = Color3.new(0, 0, 0)
+			task.wait(math.random(25, 100) / 1000)
+		end
+	end)
+end
+
+--// SHAKE
+if config.Shake then
+	task.spawn(function()
+		local basePos = face.Position
+		while gui.Parent do
+			face.Position = basePos + UDim2.new(0, math.random(-10, 10), 0, math.random(-10, 10))
+			face.Rotation = math.random(-5, 5)
+			task.wait()
+		end
+	end)
+end
+
+--// FINAL JUMPSCARE
+face.Image = config.Image2
+face.Size = UDim2.new(0, maxSize, 0, maxSize)
+
+if sound2 then sound2:Play() end
+
+TweenService:Create(face, TweenInfo.new(0.75), {
+	Size = UDim2.new(0, screenY * 3, 0, screenY * 3),
+	ImageTransparency = 0.5
+}):Play()
+
+task.spawn(function() 
+task.wait(0.75)
+
+--// CLEANUP
+gui:Destroy()
+if sound1 then sound1:Destroy() end
+if sound2 then sound2:Destroy() end
+
+if getgenv()._SMILER_ALREADY_EXECUTED then
+    return
+end
+
+getgenv()._SMILER_ALREADY_EXECUTED = true
+
+local Notify = loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/Pressure-ACHIEVEMENT"))()
+
+Notify({
+	Text = "Rush Hour\nEncountered Smiler",
+	TextColor = Color3.fromRGB(255, 158, 158),
+	BorderColor = Color3.fromRGB(255, 255, 255),
+	Icon = "rbxassetid://96720997878017",
+
+	Sound = game.Players.LocalPlayer.PlayerGui.Main.BadgePopup.BadgePopupBase.AudAchievement,
+
+	StayTime = 5,
+	ShowTweenTime = 1,
+	HideTweenTime = 1,
+})
+end) 
+end,
+    OnDespawning = function() end,
+    OnDespawned = function() 
+task.spawn(function() 
+if getgenv()._SMILER_ALREADY_EXECUTED then
+    return
+end
+
+getgenv()._SMILER_ALREADY_EXECUTED = true
+
+local Notify = loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/Pressure-ACHIEVEMENT"))()
+
+Notify({
+	Text = "Rush Hour\nEncountered Smiler",
+	TextColor = Color3.fromRGB(255, 158, 158),
+	BorderColor = Color3.fromRGB(255, 255, 255),
+	Icon = "rbxassetid://96720997878017",
+
+	Sound = game.Players.LocalPlayer.PlayerGui.Main.BadgePopup.BadgePopupBase.AudAchievement,
+
+	StayTime = 5,
+	ShowTweenTime = 1,
+	HideTweenTime = 1,
+})
+end) 
+end,
+})
