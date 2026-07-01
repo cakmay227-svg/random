@@ -12,7 +12,8 @@ spawnEntity({
     
     DelayWhenSpawned = true,     
     Delay = 15, 
-    Rebounding = true,      
+    Rebounding = true,  
+    Reversed = false, 
     Rebounds = 15,
     DelayEachRebound = 0,
     
