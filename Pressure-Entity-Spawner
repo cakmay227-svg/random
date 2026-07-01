@@ -30,9 +30,9 @@ local EntityConfig = {
     
     DelayWhenSpawned = false,      -- Bật/tắt việc chờ đợi khi spawn
     Delay = 1,                     -- Số giây chờ trước khi bắt đầu di chuyển
+    Rebounding = false, 
     MinRebounds = 1,            -- Số lần rebound tối thiểu
     MaxRebounds = 1,
-    Rebounds = 0,               -- Số lần thực thể thực hiện hành trình (1 lần đi + 1 lần về = 1 rebound)
     Reversed = false, -- Thêm dòng này vào bảng EntityConfig
     DelayEachRebound = 1,
     
