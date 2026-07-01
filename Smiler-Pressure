@@ -2,7 +2,8 @@ local spawnEntity = loadstring(game:HttpGet("https://raw.githubusercontent.com/c
 
 spawnEntity({
     AssetId = "rbxassetid://17071491370",
-    MoveSpeed = 790,
+    EntityName = "Smiler",
+    MoveSpeed = 700,
     HitboxRadius = 40,
     ShakeRadius = 150,
     DamageAmount = 100,    
@@ -11,10 +12,11 @@ spawnEntity({
     DelayEachDamage = 0.1,
     
     DelayWhenSpawned = true,     
-    Delay = 20, 
+    Delay = 15, 
     Rebounding = true,      
-    Rebounds = 20,
-    Reversed = true,
+    MinRebounds = 12,   
+    MaxRebounds = 14,
+    Reversed = false,
     DelayEachRebound = 0,
     
     YOffset = Vector3.new(0, 2, 0),
@@ -38,8 +40,8 @@ spawnEntity({
     
     DeathImage = "rbxassetid://11417375410",
     DeathName = "Smiler",
-    DeathNotes = "I Rember that smile…",
-    DeathImageColor = Color3.fromRGB(255, 255, 255), -- Mặc định là trắng (giữ nguyên màu ảnh)
+    DeathNotes = "I remember that smile…",
+    DeathImageColor = Color3.fromRGB(255, 0, 0), -- Mặc định là trắng (giữ nguyên màu ảnh)
     
     OnSpawn = function() end,
     OnMoveStart = function() end,
