@@ -1,4 +1,4 @@
-local spawnEntity = loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/L%20test"))()
+local spawnEntity = loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/Pressure-Entity-Spawner"))()
 
 spawnEntity({
     AssetId = "rbxassetid://17071491370",
@@ -6,8 +6,8 @@ spawnEntity({
     MoveSpeed = 700,
     HitboxRadius = 40,
     ShakeRadius = 150,
-    DamageAmount = 100,    
-    InstantKill = true,
+    DamageAmount = 0,    
+    InstantKill = false,
     ConstantBloodSucking = false,
     DelayEachDamage = 0.1,
     
