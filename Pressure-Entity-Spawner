@@ -32,6 +32,7 @@ local EntityConfig = {
     Delay = 1,                     -- Số giây chờ trước khi bắt đầu di chuyển
     Rebounding = false,           -- Bật/tắt cơ chế quay lại
     Rebounds = 0,               -- Số lần thực thể thực hiện hành trình (1 lần đi + 1 lần về = 1 rebound)
+    Reversed = false, -- Thêm dòng này vào bảng EntityConfig
     DelayEachRebound = 1,
     
     YOffset = Vector3.new(0, 4, 0),
@@ -744,117 +745,85 @@ end
  -- Biến này để chặn hitbox khi đang delay
 
 local function traverseNodes(nodesFolder)
-    local path
-
-    if typeof(nodesFolder) == "table" then
-        path = nodesFolder
-    else
-        path = extractPathNodes(nodesFolder)
-    end
-
+    local path = (typeof(nodesFolder) == "table") and nodesFolder or extractPathNodes(nodesFolder)
     if #path == 0 then return end
 
     EntityConfig.OnMoveStart()
+    
+    local direction = EntityConfig.Reversed and -1 or 1
+    local currentIndex = EntityConfig.Reversed and #path or 1
+    local reboundsDone = 0
 
     if not entityModel:GetAttribute("Spawned") then
         entityModel:PivotTo(path[1].CFrame + EntityConfig.YOffset)
         entityModel:SetAttribute("Spawned", true)
         
-        task.spawn(function() 
-        playCustomGitSound()
-        end) 
-
-        -- Kích hoạt hiệu ứng Flicker
-        if EntityConfig.EnableFlicker then
-            triggerDoubleFlicker()
-        end
-
-        -- TÍNH NĂNG MỚI: Delay sau khi spawn (nếu được bật)
-        if EntityConfig.DelayWhenSpawned and EntityConfig.Delay > 0 then
-            task.wait(EntityConfig.Delay)
-        end
-
+        task.spawn(playCustomGitSound)
+        if EntityConfig.EnableFlicker then triggerDoubleFlicker() end
+        if EntityConfig.DelayWhenSpawned and EntityConfig.Delay > 0 then task.wait(EntityConfig.Delay) end
         EntityConfig.OnSpawn()
 
-        -- ✅ unlock rebound AFTER spawn stabilizes
         task.defer(function()
             task.wait(0.1)
             canRebound = true
         end)
     end
-
-    local direction = 1
-    local currentIndex = 1
-    local reboundsDone = 0
-
+    
     while true do
-
         if entityFinished then return end
 
         local nextIndex = currentIndex + direction
 
-        -- =========================
-        -- REBOUND HANDLING (FIXED)
-        -- =========================
-        if (nextIndex < 1 or nextIndex > #path) then
+-- =========================
+-- LOGIC REBOUND ĐÃ SỬA (CHU KỲ TRỌN VẸN)
+-- =========================
+if (nextIndex < 1 or nextIndex > #path) then
+    if not EntityConfig.Rebounding then break end
 
-            if not EntityConfig.Rebounding then
+    -- Chỉ thực hiện logic tăng số lần nếu đã qua thời gian khóa (canRebound)
+    if canRebound then
+        -- TRỌNG TÂM: Chỉ tăng rebound khi thực thể chạm biên "Đầu" (nghĩa là đã đi từ Đầu -> Cuối -> Quay về Đầu)
+        if nextIndex < 1 then
+            if reboundsDone >= EntityConfig.Rebounds then
                 break
             end
 
-            if not canRebound then
-                nextIndex = math.clamp(nextIndex, 1, #path)
-            else
-                if reboundsDone >= EntityConfig.Rebounds then
-                    break
-                end
-
-                if reboundLock then
-                    task.wait()
-                    continue
-                end
-
+            if not reboundLock then
                 reboundLock = true
-                isReboundingPaused = true
+                reboundsDone += 1 -- Chỉ tăng khi hoàn thành 1 vòng trọn vẹn
+                print("Đã hoàn thành vòng rebound thứ: " .. reboundsDone)
 
                 task.spawn(function()
-                    task.wait(EntityConfig.DelayEachRebound)
+                    isReboundingPaused = true
+                    task.wait(EntityConfig.DelayEachRebound or 1)
                     isReboundingPaused = false
                     reboundLock = false
                 end)
-
-                direction *= -1
-                reboundsDone += 1
-
-                nextIndex = currentIndex + direction
             end
         end
+    end
+    
+    -- Vẫn luôn đảo chiều dù ở biên nào
+    direction *= -1
+    nextIndex = currentIndex + direction
+end
 
         currentIndex = nextIndex
         local targetNode = path[currentIndex]
 
         if targetNode then
             local targetPos = targetNode.Position + EntityConfig.YOffset
-
+            
+            -- Di chuyển
             while (rootPart.Position - targetPos).Magnitude > EntityConfig.Tolerance do
-
                 if entityFinished then return end
                 if isReboundingPaused then task.wait() continue end
 
                 local dt = task.wait()
-
                 local offset = targetPos - rootPart.Position
                 local moveDir = offset.Unit
 
-                entityModel:PivotTo(
-                    entityModel:GetPivot()
-                    + (moveDir * math.min(EntityConfig.MoveSpeed * dt, offset.Magnitude))
-                )
-
-                local roomModel = targetNode:FindFirstAncestorWhichIsA("Model")
-                if roomModel then
-                    applyRoomEffects(roomModel, rootPart.Position)
-                end
+                entityModel:PivotTo(entityModel:GetPivot() + (moveDir * math.min(EntityConfig.MoveSpeed * dt, offset.Magnitude)))
             end
         end
     end
@@ -887,6 +856,14 @@ local function getOrderedRooms()
             table.insert(orderedList, allRooms[i])  
         end  
     end  
+    
+    if EntityConfig.Reversed then
+        local reversedList = {}
+        for i = #orderedList, 1, -1 do
+            table.insert(reversedList, orderedList[i])
+        end
+        return reversedList
+    end
 
     return orderedList
 end
@@ -897,21 +874,23 @@ local function runEntityBehavior()
 
     for _, room in ipairs(roomsList) do
         local nodesFolder = room:FindFirstChild("EntityNodes", true)
-
         if nodesFolder then
             local roomPath = extractPathNodes(nodesFolder)
-
-            for _, node in ipairs(roomPath) do
-                table.insert(fullPath, node)
+            
+            -- Nếu Reversed, đảo ngược danh sách node của từng phòng để bắt đầu từ Exit
+            if EntityConfig.Reversed then
+                for i = #roomPath, 1, -1 do
+                    table.insert(fullPath, roomPath[i])
+                end
+            else
+                for _, node in ipairs(roomPath) do
+                    table.insert(fullPath, node)
+                end
             end
         end
     end
 
-    if #fullPath == 0 then
-        warn("[EntitySystem] Không tìm thấy EntityNodes.")
-        return
-    end
-
+    if #fullPath == 0 then return end
     traverseNodes(fullPath)
 end
 
