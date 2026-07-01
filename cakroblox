@@ -217,13 +217,16 @@ local activeShaker = initializeBypassedShaker()
 -- LOAD & ENTITY SETUP (SỬ DỤNG GETOBJECTS)
 -- =====================================================================
 local function loadEntityModel()
-    -- Kiểm tra AssetId
-    if not EntityConfig.AssetId or EntityConfig.AssetId == "" then
+    -- Sử dụng config hiện tại của thực thể (Ưu tiên _G, nếu không thì lấy mặc định)
+    local config = _G.ActiveEntityConfig or EntityConfig 
+    
+    if not config.AssetId or config.AssetId == "" then
         warn("[EntitySystem] AssetId chưa được thiết lập!")
         return nil
     end
 
-    local assetUrl = EntityConfig.AssetId
+    -- SỬA Ở ĐÂY: Dùng biến 'config.AssetId' thay vì 'EntityConfig.AssetId'
+    local assetUrl = config.AssetId 
     if not assetUrl:find("rbxassetid://") then
         assetUrl = "rbxassetid://" .. assetUrl
     end
@@ -248,14 +251,13 @@ local function loadEntityModel()
         model = wrapper
     end
 
-    -- CHỨC NĂNG MỚI: TỰ TẠO PRIMARYPART NẾU KHÔNG CÓ
+    -- TỰ TẠO PRIMARYPART NẾU KHÔNG CÓ
     if not model.PrimaryPart then
         local firstPart = model:FindFirstChildWhichIsA("BasePart", true)
         
         if firstPart then
             model.PrimaryPart = firstPart
         else
-            -- Nếu trong model hoàn toàn không có part nào, tạo mới 1 part
             local fallbackPart = Instance.new("Part")
             fallbackPart.Name = "PrimaryPartFallback"
             fallbackPart.Transparency = 1
@@ -927,10 +929,24 @@ local function runEntityBehavior()
 end
 
 return function(customConfig)
+    -- 1. Tạo một bảng cấu hình riêng cho thực thể này bằng cách copy từ EntityConfig mặc định
+    local currentEntityConfig = {}
+    for k, v in pairs(EntityConfig) do
+        currentEntityConfig[k] = v
+    end
+
+    -- 2. Ghi đè cấu hình nếu người dùng truyền vào
     if customConfig then
         for k, v in pairs(customConfig) do
-            if EntityConfig[k] ~= nil then EntityConfig[k] = v end
+            currentEntityConfig[k] = v
         end
     end
+
+    -- 3. CHỈNH SỬA: Bạn cần truyền currentEntityConfig này vào các hàm runEntityBehavior, traverseNodes, v.v.
+    -- Cách nhanh nhất là gán tạm thời vào một biến toàn cục hoặc truyền tham số (khuyên dùng truyền tham số)
+    
+    -- Tạm thời để script chạy, bạn có thể gán biến local ở scope module:
+    _G.ActiveEntityConfig = currentEntityConfig
+    
     task.spawn(runEntityBehavior)
 end
