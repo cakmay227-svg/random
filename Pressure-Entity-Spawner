@@ -749,34 +749,33 @@ local function traverseNodes(nodesFolder)
     local path = (typeof(nodesFolder) == "table") and nodesFolder or extractPathNodes(nodesFolder)
     if #path == 0 then return end
 
-    -- 1. Tính toán rebound ngẫu nhiên
+    -- 1. Tính toán số vòng rebound ngẫu nhiên nếu Rebounding = true
     local totalRebounds = 0
     if EntityConfig.Rebounding then
         totalRebounds = math.random(EntityConfig.MinRebounds or 1, EntityConfig.MaxRebounds or 1)
-        print("Entity thực hiện: " .. totalRebounds .. " vòng rebound.")
+        print("Entity này sẽ thực hiện " .. totalRebounds .. " vòng rebound.")
     end
 
     EntityConfig.OnMoveStart()
     
-    -- 2. Đồng bộ hóa hướng và index ngay từ đầu
+    -- 2. Đồng bộ hóa hướng di chuyển và vị trí index bắt đầu
     local direction = EntityConfig.Reversed and -1 or 1
     local currentIndex = EntityConfig.Reversed and #path or 1
     local reboundsDone = 0
 
-    -- 3. Spawn và Snap an toàn
+    -- 3. Spawn và Snap an toàn (Tránh lỗi bay tốc độ cao)
     if not entityModel:GetAttribute("Spawned") then
         local startCFrame = path[currentIndex].CFrame + EntityConfig.YOffset
         entityModel:PivotTo(startCFrame)
         entityModel:SetAttribute("Spawned", true)
         
-        -- Gọi hiệu ứng
         task.spawn(playCustomGitSound)
         if EntityConfig.EnableFlicker then triggerDoubleFlicker() end
         if EntityConfig.DelayWhenSpawned and EntityConfig.Delay > 0 then task.wait(EntityConfig.Delay) end
         EntityConfig.OnSpawn()
 
-        -- Đợi ngắn để model ổn định trên Server/Client
-        task.wait(0.2)
+        -- Chờ 0.3s để engine vật lý ổn định vị trí model trước khi di chuyển
+        task.wait(0.3)
         canRebound = true
     end
     
@@ -786,18 +785,18 @@ local function traverseNodes(nodesFolder)
         local nextIndex = currentIndex + direction
 
         -- =========================================================
-        -- LOGIC REBOUND VÀ ĐẢO CHIỀU
+        -- LOGIC REBOUND & ĐẢO CHIỀU
         -- =========================================================
         if (nextIndex < 1 or nextIndex > #path) then
             if not EntityConfig.Rebounding then break end
 
             if canRebound then
-                -- Kiểm tra xem đã quay về "Checkpoint" (Điểm bắt đầu của hướng đi) chưa
+                -- Kiểm tra xem đã quay về "Checkpoint" chưa (biên đầu của hướng đi)
                 local isAtCheckpoint = EntityConfig.Reversed and (nextIndex > #path) or (nextIndex < 1)
                 
                 if isAtCheckpoint then
                     if reboundsDone >= totalRebounds then
-                        break -- Đã đạt giới hạn số vòng
+                        break -- Hoàn thành đủ số vòng random
                     end
 
                     if not reboundLock then
@@ -815,19 +814,18 @@ local function traverseNodes(nodesFolder)
                 end
             end
             
-            -- Đảo chiều di chuyển
+            -- Đảo chiều
             direction *= -1
             nextIndex = currentIndex + direction
         end
 
-        -- Update Index
         currentIndex = nextIndex
         local targetNode = path[currentIndex]
 
         if targetNode then
             local targetPos = targetNode.Position + EntityConfig.YOffset
             
-            -- Di chuyển với kiểm soát khoảng cách
+            -- Di chuyển tới node tiếp theo với giới hạn tốc độ frame
             while (rootPart.Position - targetPos).Magnitude > EntityConfig.Tolerance do
                 if entityFinished then return end
                 if isReboundingPaused then task.wait() continue end
@@ -836,8 +834,7 @@ local function traverseNodes(nodesFolder)
                 local offset = targetPos - rootPart.Position
                 local moveDir = offset.Unit
 
-                -- CẤU TRÚC DI CHUYỂN AN TOÀN: 
-                -- Chỉ di chuyển tối đa trong phạm vi MoveSpeed * dt
+                -- Giới hạn khoảng cách di chuyển trong 1 frame để không bị "bay"
                 local moveStep = math.min(EntityConfig.MoveSpeed * dt, offset.Magnitude)
                 entityModel:PivotTo(entityModel:GetPivot() + (moveDir * moveStep))
             end
