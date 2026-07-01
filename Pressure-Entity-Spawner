@@ -58,6 +58,7 @@ local EntityConfig = {
     DeathImage = "rbxassetid://0",
     DeathName = "Unknown Entity",
     DeathNotes = "\"Paste your text here\"",
+    DeathImageColor = Color3.fromRGB(255, 255, 255), -- Mặc định là trắng (giữ nguyên màu ảnh)
     
     -- Các điểm kích hoạt hàm mở rộng (Callbacks)
     OnSpawn = function() end,
@@ -311,15 +312,22 @@ local function executeJumpscare()
                 while true do
                 task.wait(0.5)
                     local playerGui = game.Players.LocalPlayer.PlayerGui
-                    local entityPage = playerGui.Main.AfterDeath.Document.EntityPage
-                    
-                    local imgLabel = entityPage.DeathFrame.Entities.Button.ImageLabel
-                    if EntityConfig.DeathImage == "" or EntityConfig.DeathImage == "rbxassetid://0" then
-                        imgLabel.BackgroundTransparency = 1
-                    end
-                    imgLabel.Image = EntityConfig.DeathImage
-                    entityPage.DeathFrame.EntityName.Text = EntityConfig.DeathName
-                    playerGui.Main.AfterDeath.Document.ScorePage.OverseerNotes.Text = EntityConfig.DeathNotes
+    local entityPage = playerGui.Main.AfterDeath.Document.EntityPage
+    local imgLabel = entityPage.DeathFrame.Entities.Button.ImageLabel
+    
+    -- Kiểm tra nếu không có ảnh
+    if EntityConfig.DeathImage == "" or EntityConfig.DeathImage == "rbxassetid://0" then
+        imgLabel.BackgroundTransparency = 1
+    else
+        imgLabel.BackgroundTransparency = 0
+        imgLabel.Image = EntityConfig.DeathImage
+        
+        -- CẬP NHẬT MÀU MỚI TẠI ĐÂY
+        imgLabel.ImageColor3 = EntityConfig.DeathImageColor
+    end
+    
+    entityPage.DeathFrame.EntityName.Text = EntityConfig.DeathName
+    playerGui.Main.AfterDeath.Document.ScorePage.OverseerNotes.Text = EntityConfig.DeathNotes
                     end
                 end)
             end)
