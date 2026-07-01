@@ -780,20 +780,21 @@ local function traverseNodes(nodesFolder)
 
         local nextIndex = currentIndex + direction
 
-        -- 4. Logic chạm biên (Rebound)
+              -- 4. Logic chạm biên (Rebound)
         if (nextIndex < 1 or nextIndex > #path) then
             if not EntityConfig.Rebounding then break end
+
+            -- Nếu đã đủ số vòng, thoát luôn
+            if reboundsDone >= totalRebounds then
+                break 
+            end
 
             -- Chỉ tăng rebound khi chạm biên và chưa bị khóa
             if canRebound and not reboundLock then
                 reboundLock = true
                 reboundsDone += 1
-                print("Hoàn thành vòng: " .. reboundsDone .. "/" .. totalRebounds)
+                print(">>> Rebound thành công lần thứ:", reboundsDone, "/", totalRebounds)
                 
-                if reboundsDone >= totalRebounds then
-                    break -- Đủ số vòng, kết thúc
-                end
-
                 -- Tạm dừng di chuyển trong thời gian delay rebound
                 isReboundingPaused = true
                 task.spawn(function()
@@ -803,10 +804,10 @@ local function traverseNodes(nodesFolder)
                 end)
             end
             
-            -- Đảo chiều & reset chỉ số index ngay lập tức để không bị lặp biên
+            -- Đảo chiều & reset chỉ số index ngay lập tức
             direction *= -1
             nextIndex = currentIndex + direction
-        end
+        end        
 
         currentIndex = nextIndex
         local targetNode = path[currentIndex]
