@@ -745,9 +745,29 @@ end
 
  -- Biến này để chặn hitbox khi đang delay
 
+local logs = {}
+
+local function log(...)
+    local t = {}
+    for i = 1, select("#", ...) do
+        t[#t + 1] = tostring(select(i, ...))
+    end
+    table.insert(logs, table.concat(t, " "))
+end
+
+local function copyLogs()
+    local text = table.concat(logs, "\n")
+    print(text)
+    if setclipboard then
+        setclipboard(text)
+    end
+end
+
 local function traverseNodes(nodesFolder)
     local path = (typeof(nodesFolder) == "table") and nodesFolder or extractPathNodes(nodesFolder)
     if #path == 0 then return end
+    
+    log("PATH SIZE:", #path)
 
     -- 1. Tính toán số vòng rebound ngẫu nhiên
     local totalRebounds = EntityConfig.Rebounding and math.random(EntityConfig.MinRebounds or 1, EntityConfig.MaxRebounds or 1) or 0
@@ -777,6 +797,15 @@ local function traverseNodes(nodesFolder)
     
     while true do
         if entityFinished then return end
+        
+        log(
+        "Current:", currentIndex,
+        "Next:", currentIndex + direction,
+        "Direction:", direction,
+        "Rebounds:", reboundsDone,
+        "/",
+        totalRebounds
+    )
 
         local nextIndex = currentIndex + direction
 
@@ -786,8 +815,10 @@ local function traverseNodes(nodesFolder)
 
             -- Nếu đã đủ số vòng, thoát luôn
             if reboundsDone >= totalRebounds then
-                break 
-            end
+    log("BREAK BECAUSE REBOUND LIMIT")
+    log("Done:", reboundsDone, "Need:", totalRebounds)
+    break
+end
 
             -- Chỉ tăng rebound khi chạm biên và chưa bị khóa
             if canRebound and not reboundLock then
@@ -832,7 +863,8 @@ local function traverseNodes(nodesFolder)
         end
     end
 
-    despawnEntity()
+    log("WHILE ENDED -> DESPAWN")
+despawnEntity()
 end
 
 -- =====================================================================
