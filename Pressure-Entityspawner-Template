@@ -14,7 +14,8 @@ spawnEntity({
     Delay = 15, 
     Rebounding = true,  
     Reversed = false, 
-    Rebounds = 15,
+    MinRebounds = 1,   
+    MaxRebounds = 1,
     DelayEachRebound = 0,
     
     YOffset = Vector3.new(0, 2, 0),
