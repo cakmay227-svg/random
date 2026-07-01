@@ -776,8 +776,8 @@ local function traverseNodes(nodesFolder)
     EntityConfig.OnMoveStart()
     
     -- 2. Khởi tạo hướng và index dựa trên chế độ Reversed
-    local direction = EntityConfig.Reversed and -1 or 1
-    local currentIndex = EntityConfig.Reversed and #path or 1
+    local direction = 1
+local currentIndex = 1
     local reboundsDone = 0
 
     -- 3. Spawn và Snap an toàn (tránh lỗi bay)
