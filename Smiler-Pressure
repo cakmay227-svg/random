@@ -2,9 +2,9 @@ local spawnEntity = loadstring(game:HttpGet("https://raw.githubusercontent.com/c
 
 spawnEntity({
     AssetId = "rbxassetid://17071491370",
-    MoveSpeed = 890,
-    HitboxRadius = 90,
-    ShakeRadius = 100,
+    MoveSpeed = 790,
+    HitboxRadius = 40,
+    ShakeRadius = 150,
     DamageAmount = 100,    
     InstantKill = true,
     ConstantBloodSucking = false,
