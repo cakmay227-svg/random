@@ -1,0 +1,42 @@
+-- Script trên GitHub
+
+local TweenService = game:GetService("TweenService")
+local Player = game:GetService("Players").LocalPlayer
+
+return function(Config)
+	local achi = Player.PlayerGui.Main.Achivement
+
+	achi.Visible = true
+	achi.Position = Config.StartPosition or UDim2.new(0.725, 0, 1, 0)
+
+	task.wait(Config.DelayBeforeShow or 1)
+
+	achi.Continue.Outer.ImageColor3 = Config.BorderColor or Color3.fromRGB(255,255,255)
+	achi.Continue.ImportantStuff.PlayText.TextScaled = Config.TextScaled ~= false
+	achi.Continue.ImportantStuff.PlayText.TextColor3 = Config.TextColor or Color3.new(1,1,1)
+	achi.Continue.ImportantStuff.PlayText.Text = Config.Text or ""
+	achi.Continue.ImportantStuff.Skull.Image = Config.Icon or ""
+
+	if Config.Sound then
+		Config.Sound:Play()
+	end
+
+	TweenService:Create(
+		achi,
+		TweenInfo.new(Config.ShowTweenTime or 1),
+		{Position = Config.ShowPosition or UDim2.new(0.725, 0, 0.84, 0)}
+	):Play()
+
+	task.wait(Config.StayTime or 5)
+
+	TweenService:Create(
+		achi,
+		TweenInfo.new(Config.HideTweenTime or 1),
+		{Position = Config.StartPosition or UDim2.new(0.725, 0, 1, 0)}
+	):Play()
+
+	task.wait(Config.HideTweenTime or 1)
+
+	achi.Continue.ImportantStuff.PlayText.Text = ""
+	achi.Continue.ImportantStuff.Skull.Image = ""
+end
