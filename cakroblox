@@ -929,24 +929,24 @@ local function runEntityBehavior()
 end
 
 return function(customConfig)
-    -- 1. Tạo một bảng cấu hình riêng cho thực thể này bằng cách copy từ EntityConfig mặc định
-    local currentEntityConfig = {}
+    -- Tạo một bảng cấu hình mới dựa trên mặc định ĐỂ KHÔNG GHI ĐÈ BẢNG GỐC
+    local configForThisInstance = {}
+    
+    -- Copy các giá trị mặc định vào
     for k, v in pairs(EntityConfig) do
-        currentEntityConfig[k] = v
+        configForThisInstance[k] = v
     end
-
-    -- 2. Ghi đè cấu hình nếu người dùng truyền vào
+    
+    -- Ghi đè bằng customConfig của người dùng
     if customConfig then
         for k, v in pairs(customConfig) do
-            currentEntityConfig[k] = v
+            configForThisInstance[k] = v
         end
     end
-
-    -- 3. CHỈNH SỬA: Bạn cần truyền currentEntityConfig này vào các hàm runEntityBehavior, traverseNodes, v.v.
-    -- Cách nhanh nhất là gán tạm thời vào một biến toàn cục hoặc truyền tham số (khuyên dùng truyền tham số)
     
-    -- Tạm thời để script chạy, bạn có thể gán biến local ở scope module:
-    _G.ActiveEntityConfig = currentEntityConfig
+    -- Gán vào biến toàn cục tạm thời để hàm loadEntityModel đọc đúng instance này
+    _G.ActiveEntityConfig = configForThisInstance
     
+    -- Chạy behavior
     task.spawn(runEntityBehavior)
 end
