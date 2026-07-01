@@ -749,21 +749,18 @@ local function traverseNodes(nodesFolder)
     local path = (typeof(nodesFolder) == "table") and nodesFolder or extractPathNodes(nodesFolder)
     if #path == 0 then return end
 
-    -- 1. Tính toán số vòng rebound ngẫu nhiên nếu Rebounding = true
-    local totalRebounds = 0
-    if EntityConfig.Rebounding then
-        totalRebounds = math.random(EntityConfig.MinRebounds or 1, EntityConfig.MaxRebounds or 1)
-        print("Entity này sẽ thực hiện " .. totalRebounds .. " vòng rebound.")
-    end
+    -- 1. Tính toán số vòng rebound ngẫu nhiên
+    local totalRebounds = EntityConfig.Rebounding and math.random(EntityConfig.MinRebounds or 1, EntityConfig.MaxRebounds or 1) or 0
+    if EntityConfig.Rebounding then print("Entity thực hiện: " .. totalRebounds .. " vòng rebound.") end
 
     EntityConfig.OnMoveStart()
     
-    -- 2. Đồng bộ hóa hướng di chuyển và vị trí index bắt đầu
+    -- 2. Khởi tạo hướng và index dựa trên chế độ Reversed
     local direction = EntityConfig.Reversed and -1 or 1
     local currentIndex = EntityConfig.Reversed and #path or 1
     local reboundsDone = 0
 
-    -- 3. Spawn và Snap an toàn (Tránh lỗi bay tốc độ cao)
+    -- 3. Spawn và Snap an toàn (tránh lỗi bay)
     if not entityModel:GetAttribute("Spawned") then
         local startCFrame = path[currentIndex].CFrame + EntityConfig.YOffset
         entityModel:PivotTo(startCFrame)
@@ -774,8 +771,7 @@ local function traverseNodes(nodesFolder)
         if EntityConfig.DelayWhenSpawned and EntityConfig.Delay > 0 then task.wait(EntityConfig.Delay) end
         EntityConfig.OnSpawn()
 
-        -- Chờ 0.3s để engine vật lý ổn định vị trí model trước khi di chuyển
-        task.wait(0.3)
+        task.wait(0.3) -- Ổn định vật lý
         canRebound = true
     end
     
@@ -784,37 +780,30 @@ local function traverseNodes(nodesFolder)
 
         local nextIndex = currentIndex + direction
 
-        -- =========================================================
-        -- LOGIC REBOUND & ĐẢO CHIỀU
-        -- =========================================================
+        -- 4. Logic chạm biên (Rebound)
         if (nextIndex < 1 or nextIndex > #path) then
             if not EntityConfig.Rebounding then break end
 
-            if canRebound then
-                -- Kiểm tra xem đã quay về "Checkpoint" chưa (biên đầu của hướng đi)
-                local isAtCheckpoint = EntityConfig.Reversed and (nextIndex > #path) or (nextIndex < 1)
+            -- Chỉ tăng rebound khi chạm biên và chưa bị khóa
+            if canRebound and not reboundLock then
+                reboundLock = true
+                reboundsDone += 1
+                print("Hoàn thành vòng: " .. reboundsDone .. "/" .. totalRebounds)
                 
-                if isAtCheckpoint then
-                    if reboundsDone >= totalRebounds then
-                        break -- Hoàn thành đủ số vòng random
-                    end
-
-                    if not reboundLock then
-                        reboundLock = true
-                        reboundsDone += 1
-                        print("Hoàn thành vòng: " .. reboundsDone .. "/" .. totalRebounds)
-
-                        task.spawn(function()
-                            isReboundingPaused = true
-                            task.wait(EntityConfig.DelayEachRebound or 1)
-                            isReboundingPaused = false
-                            reboundLock = false
-                        end)
-                    end
+                if reboundsDone >= totalRebounds then
+                    break -- Đủ số vòng, kết thúc
                 end
+
+                -- Tạm dừng di chuyển trong thời gian delay rebound
+                isReboundingPaused = true
+                task.spawn(function()
+                    task.wait(EntityConfig.DelayEachRebound or 1)
+                    isReboundingPaused = false
+                    reboundLock = false
+                end)
             end
             
-            -- Đảo chiều
+            -- Đảo chiều & reset chỉ số index ngay lập tức để không bị lặp biên
             direction *= -1
             nextIndex = currentIndex + direction
         end
@@ -825,16 +814,17 @@ local function traverseNodes(nodesFolder)
         if targetNode then
             local targetPos = targetNode.Position + EntityConfig.YOffset
             
-            -- Di chuyển tới node tiếp theo với giới hạn tốc độ frame
+            -- Di chuyển tới node
             while (rootPart.Position - targetPos).Magnitude > EntityConfig.Tolerance do
                 if entityFinished then return end
+                -- Nếu đang trong thời gian delay rebound, đứng yên
                 if isReboundingPaused then task.wait() continue end
 
                 local dt = task.wait()
                 local offset = targetPos - rootPart.Position
                 local moveDir = offset.Unit
 
-                -- Giới hạn khoảng cách di chuyển trong 1 frame để không bị "bay"
+                -- Giới hạn khoảng cách di chuyển (chống bay)
                 local moveStep = math.min(EntityConfig.MoveSpeed * dt, offset.Magnitude)
                 entityModel:PivotTo(entityModel:GetPivot() + (moveDir * moveStep))
             end
