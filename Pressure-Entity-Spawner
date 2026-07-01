@@ -20,6 +20,7 @@ local URSpecialEffects = Remotes:WaitForChild("URSpecialEffects")
 
 local EntityConfig = {
     AssetId = "rbxassetid://71148476112454",
+    EntityName = "Unknown Entity",
     MoveSpeed = 40,
     HitboxRadius = 50,
     ShakeRadius = 100,
@@ -229,6 +230,9 @@ local function loadEntityModel()
 	if not model then
 		error("[EntitySystem] Asset không phải Model!")
 	end
+	
+	model.Name = EntityConfig.EntityName
+	
 	model.Parent = workspace
 	if not model.PrimaryPart then
 		local firstPart = model:FindFirstChildWhichIsA("BasePart", true)
@@ -767,6 +771,8 @@ local function traverseNodes(nodesFolder)
     local path = (typeof(nodesFolder) == "table") and nodesFolder or extractPathNodes(nodesFolder)
     if #path == 0 then return end
     
+    local lastRoom = nil
+    
     log("PATH SIZE:", #path)
 
     -- 1. Tính toán số vòng rebound ngẫu nhiên
@@ -860,6 +866,18 @@ end
                 local moveStep = math.min(EntityConfig.MoveSpeed * dt, offset.Magnitude)
                 entityModel:PivotTo(entityModel:GetPivot() + (moveDir * moveStep))
             end
+            
+            local room = targetNode:FindFirstAncestorWhichIsA("Model")
+
+if room and room ~= lastRoom then
+    lastRoom = room
+
+    if EntityConfig.EnableBreakLights then
+        applyRoomEffects(room, rootPart.Position)
+    end
+
+    EntityConfig.OnRoomEnter(room.Name)
+end
         end
     end
 
