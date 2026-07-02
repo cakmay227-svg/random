@@ -34,7 +34,7 @@ local function RefreshFloors()
 	for _, obj in ipairs(SearchlightsEncounter:GetDescendants()) do
 		if obj:IsA("BasePart")
 		and obj.Name == "Floor"
-		and obj.Transparency > 0.1 then
+		and obj.Transparency == 0 then
 
 			table.insert(FloorParts, obj)
 		end
@@ -249,7 +249,7 @@ local function IsPositionOnFloor(position)
 	return hit
 		and hit:IsA("BasePart")
 		and hit.Name == "Floor"
-		and hit.Transparency > 0.1
+		and hit.Transparency == 0
 
 end
 
