@@ -36,7 +36,18 @@ spawnEntity({
     GithubSound = "",         
     PlayGitSoundWhenSpawned = false, 
     SoundVolume = 1,        
-    SoundPlaybackSpeed = 1,      
+    SoundPlaybackSpeed = 1,
+
+    LightBreakRange = 35,                          
+    LightDarkenPercent = 0.11,                
+    LightAutoScanInterval = 0.1,              
+    
+    LightSoundId = "rbxassetid://13303926122", 
+    LightSoundVolume = 2,                   
+    LightSoundDistance = 150,                 
+    
+    LightParticleTexture = "rbxassetid://257173628", 
+    LightParticleDuration = 0.3,
     
     DeathImage = "rbxassetid://11417375410",
     DeathName = "Smiler",
