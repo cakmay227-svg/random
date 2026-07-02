@@ -1,0 +1,276 @@
+local rooms = workspace.GameplayFolder.Rooms
+local BREAK_SOUND_ID = "rbxassetid://13303926122"
+
+local Workspace = game:GetService("Workspace")
+local EntityModel = nil
+local RoomCheckConnection = nil
+local InitialRoomCount = 0
+
+local function applyRoomEffects(room)
+    if not room then return end
+    
+    local function playBreakSound(part)
+    if not part then return end
+
+    local sound = Instance.new("Sound")  
+    sound.SoundId = BREAK_SOUND_ID
+    sound.Volume = 1  
+    sound.RollOffMaxDistance = 80  
+    sound.Parent = part  
+    sound:Play()  
+
+    sound.Ended:Connect(function()  
+        sound:Destroy()  
+    end)
+end
+
+    local endTime = os.clock() + 0.2
+
+    for _, obj in ipairs(room:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Name == "Sign" then
+            for _, gui in ipairs(obj:GetChildren()) do
+                if gui:IsA("SurfaceGui") then
+                    for _, label in ipairs(gui:GetDescendants()) do
+                        if label:IsA("TextLabel") and not label:GetAttribute("Darkened") then
+                            label:SetAttribute("Darkened", true)
+
+                            local originalColor = label.TextColor3
+                            label.TextColor3 = Color3.new(
+                                originalColor.R * 0.15,
+                                originalColor.G * 0.15,
+                                originalColor.B * 0.15
+                            )
+                        end
+                    end
+                end
+            end
+        end
+
+        if not obj:GetAttribute("Broken") then
+            local isLight = obj:IsA("Light") and obj.Parent and obj.Parent:IsA("BasePart")
+            local isNeonPart = obj:IsA("BasePart") and obj.Material == Enum.Material.Neon
+
+            if isLight or isNeonPart then
+                obj:SetAttribute("Broken", true)
+
+                if isLight and obj.Enabled then
+                    task.spawn(function()
+                        while os.clock() < endTime do
+                            obj.Enabled = not obj.Enabled
+                            
+                            task.spawn(function() 
+                            playBreakSound(obj)
+                            end) 
+                            
+                            task.wait(math.random(3, 10) / 100)
+                        end
+                        obj.Enabled = false                                                                                                        
+                    end)
+                end
+
+                if isNeonPart then
+                    obj.Material = Enum.Material.SmoothPlastic
+                end
+            end
+        end
+    end
+end
+
+local RoomsFolder = Workspace:WaitForChild("GameplayFolder"):WaitForChild("Rooms")
+
+local ENTITY_ASSET_ID = 126141993763169 -- Tá»± thay AssetId
+
+local Spawned = false
+
+local function spawnEntity(cf)
+	if Spawned then return end
+	Spawned = true
+
+	local entity = game:GetObjects("rbxassetid://" .. ENTITY_ASSET_ID)[1]
+	if not entity then return end
+
+	entity.Parent = Workspace
+EntityModel = entity
+entity:ScaleTo(1.5)
+
+	if entity:IsA("Model") then
+		local primary = entity.PrimaryPart or entity:FindFirstChildWhichIsA("BasePart", true)
+		if primary then
+			entity.PrimaryPart = primary
+			primary.CFrame = cf -- ðŸ‘ˆ QUAN TRá»ŒNG
+		end
+	elseif entity:IsA("BasePart") then
+		entity.CFrame = cf
+	end
+end
+
+local function getSpawnNode(room)
+	for _, obj in ipairs(room:GetDescendants()) do
+		if obj:IsA("BasePart")
+			and obj.Name == "Node"
+			and obj.Parent
+			and obj.Parent:IsA("Folder")
+			and obj.Parent.Name == "EntityNodes" then
+
+			return obj
+		end
+	end
+
+	return nil
+end
+
+local function resetEntity()
+	Spawned = false
+
+	if RoomCheckConnection then
+		RoomCheckConnection:Disconnect()
+		RoomCheckConnection = nil
+	end
+
+	if EntityModel and EntityModel.Parent then
+		EntityModel:Destroy()
+	end
+
+	EntityModel = nil
+	
+	local Notify = loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/Pressure-ACHIEVEMENT"))()
+
+Notify({
+	Text = "Dead Silence. Encountered Silence.",
+	TextColor = Color3.fromRGB(255,255,255),
+	BorderColor = Color3.fromRGB(255,255,255),
+	Icon = "rbxassetid://81509430953592",
+
+	Sound = game.Players.LocalPlayer.PlayerGui.Main.BadgePopup.BadgePopupBase.AudAchievement,
+
+	StayTime = 5,
+	ShowTweenTime = 1,
+	HideTweenTime = 1,
+})
+end
+
+for _, room in ipairs(RoomsFolder:GetDescendants()) do
+	if room:IsA("Model") then
+		local entrances = room:FindFirstChild("Entrances")
+
+		if entrances and entrances:IsA("Folder") then
+			local normalDoor = entrances:FindFirstChild("NormalDoor")
+
+			if normalDoor and normalDoor:IsA("Model") then
+				local openValue = normalDoor:FindFirstChild("OpenValue")
+
+				if openValue
+					and openValue:IsA("BoolValue")
+					and openValue.Value == false then
+
+					openValue:GetPropertyChangedSignal("Value"):Once(function()
+						if not openValue.Value then
+							return
+						end
+						
+						task.wait(1)
+
+						local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+local origin = hrp.Position
+local direction = hrp.CFrame.LookVector * 15
+
+local params = RaycastParams.new()
+params.FilterType = Enum.RaycastFilterType.Exclude
+params.FilterDescendantsInstances = {character}
+
+local result = Workspace:Raycast(origin, direction, params)
+
+local spawnPos
+
+if result then
+	-- Spawn sát bức tường nhưng lùi ra 1 stud để tránh kẹt trong tường
+	spawnPos = result.Position - hrp.CFrame.LookVector
+else
+	-- Không có tường thì spawn cách 15 studs
+	spawnPos = origin + direction
+end
+
+spawnPos += Vector3.new(0, 10, 0)
+
+spawnEntity(CFrame.new(spawnPos))
+
+InitialRoomCount = 0
+
+for _, v in ipairs(RoomsFolder:GetChildren()) do
+	if v:IsA("Model") then
+		InitialRoomCount += 1
+	end
+end
+
+RoomCheckConnection = RoomsFolder.DescendantAdded:Connect(function()
+	local currentCount = 0
+
+	for _, v in ipairs(RoomsFolder:GetChildren()) do
+		if v:IsA("Model") then
+			currentCount += 1
+		end
+	end
+
+	-- Chỉ cần thêm 1 model là reset
+	if currentCount > InitialRoomCount then
+		resetEntity()
+	end
+end)
+
+task.spawn(function()
+	local damageRemote = game.ReplicatedStorage:FindFirstChild("LocalDamage", true)
+		or game.ReplicatedStorage:FindFirstChild("ChangeHealth", true)
+
+	while Spawned do
+		local isCrouching = player:GetAttribute("IsCrouching")
+
+		-- Không có Attribute hoặc = false thì gây damage
+		if isCrouching ~= true then
+			if damageRemote and damageRemote:IsA("RemoteEvent") then
+				damageRemote:FireServer(10, "SittingItOut", 1, nil)
+				damageRemote:FireServer("Damage", 10)
+			end
+		end
+		
+		local healthLabel = game.Players.LocalPlayer.PlayerGui.Main.Health.TextLabel
+
+task.wait(1)
+
+if Spawned and tonumber(healthLabel.Text) == 0 then
+    
+resetEntity()
+
+    task.spawn(function()
+        while true do
+            task.wait(0.5)
+
+            local playerGui = game.Players.LocalPlayer.PlayerGui
+            local entityPage = playerGui.Main.AfterDeath.Document.EntityPage
+            local imgLabel = entityPage.DeathFrame.Entities.Button.ImageLabel
+
+            imgLabel.Image = "rbxassetid://81509430953592"
+            imgLabel.ImageColor3 = Color3.fromRGB(255, 255, 255)
+
+            entityPage.DeathFrame.EntityName.Text = "Silence"
+            playerGui.Main.AfterDeath.Document.ScorePage.OverseerNotes.Text = "Shhh.... Be quiet!"
+        end
+    end)
+end
+
+		task.wait(0.9)
+	end
+end)
+
+applyRoomEffects(rooms)
+					end)
+
+					break
+				end
+			end
+		end
+	end
+end
