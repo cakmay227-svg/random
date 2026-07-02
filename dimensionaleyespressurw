@@ -1,0 +1,180 @@
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+
+local Player = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local RoomsFolder = Workspace:WaitForChild("GameplayFolder"):WaitForChild("Rooms")
+
+local EntityModel = nil
+local DamageConnection = nil
+local DeathGuiStarted = false
+
+local InitialRoomModelCount = 0
+
+for _, v in ipairs(RoomsFolder:GetChildren()) do
+	if v:IsA("Model") then
+		InitialRoomModelCount += 1
+	end
+end
+
+local ENTITY_ASSET_ID = 134996330348812
+local Spawned = false
+local EntityInstance = nil
+
+-- Cấu hình sát thương
+local LAST_DAMAGE_TIME = 0
+local DAMAGE_INTERVAL = 0.01 -- Khoảng cách giữa các lần gây sát thương
+
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://"..127155960884656
+sound.Looped = false
+sound.Parent = game.Workspace
+sound.PlaybackSpeed = 1.8
+sound.Volume = 0.5
+
+local function isLookingAt(targetPart)
+    if not targetPart then
+        return false
+    end
+
+    local vector, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+    return onScreen and vector.Z > 0
+end
+
+local function SpawnEntity(cf)
+    if Spawned then return end
+    Spawned = true
+
+    local Entity = game:GetObjects("rbxassetid://" .. ENTITY_ASSET_ID)[1]  
+    if not Entity then return end  
+    
+    Entity.Parent = Workspace
+EntityModel = Entity
+    local Primary = Entity:IsA("Model") and (Entity.PrimaryPart or Entity:FindFirstChildWhichIsA("BasePart", true)) or Entity
+    if Primary then
+        Entity.PrimaryPart = Primary
+        Entity:PivotTo(cf)
+        EntityInstance = Primary 
+    end
+
+    task.wait(4)
+    
+    -- Sử dụng kết nối để có thể ngắt (disconnect) nếu cần
+    DamageConnection = RunService.RenderStepped:Connect(function()
+        if not EntityInstance or not EntityInstance.Parent then 
+            DamageConnection:Disconnect()
+DamageConnection = nil
+            return 
+        end
+        
+        local function killOneShot()
+    local currentTime = tick()
+    -- Chỉ cho phép gây sát thương nếu đã trôi qua đủ thời gian DAMAGE_INTERVAL
+    if (currentTime - LAST_DAMAGE_TIME) < DAMAGE_INTERVAL then return end
+    
+    local damageRemote = ReplicatedStorage:FindFirstChild("LocalDamage", true) or ReplicatedStorage:FindFirstChild("ChangeHealth", true)
+    if damageRemote and damageRemote:IsA("RemoteEvent") then  
+        damageRemote:FireServer(0.05, "SittingItOut", 1, nil)  
+        damageRemote:FireServer("Damage", 0.05)  
+        sound:Play()
+        
+        local healthLabel = Player.PlayerGui.Main.Health.TextLabel
+
+task.wait(1)
+
+if not DeathGuiStarted and tonumber(healthLabel.Text) == 0 then
+    DeathGuiStarted = true
+    
+    if DamageConnection then
+    DamageConnection:Disconnect()
+    DamageConnection = nil
+end
+
+if EntityModel and EntityModel.Parent then
+    EntityModel:Destroy()
+end
+
+EntityModel = nil
+EntityInstance = nil
+Spawned = false
+LAST_DAMAGE_TIME = 0
+
+    task.spawn(function()
+        while true do
+            task.wait(0.5)
+
+            local playerGui = Player.PlayerGui
+            local entityPage = playerGui.Main.AfterDeath.Document.EntityPage
+            local imgLabel = entityPage.DeathFrame.Entities.Button.ImageLabel
+
+            imgLabel.Image = "rbxassetid://92705072023283"
+            imgLabel.ImageColor3 = Color3.fromRGB(255, 255, 255)
+
+            entityPage.DeathFrame.EntityName.Text = "Dimensional Eyes"
+            playerGui.Main.AfterDeath.Document.ScorePage.OverseerNotes.Text = "Look at me!"
+        end
+    end)
+end
+
+        LAST_DAMAGE_TIME = currentTime
+    end
+end
+        
+        -- Logic: Chỉ gọi hàm kill nếu KHÔNG nhìn vào
+        if not isLookingAt(EntityInstance) then
+            killOneShot()
+        end
+    end)
+end
+
+-- (Giữ nguyên hàm CheckRooms cũ của bạn)
+
+local function CheckRooms()
+    for _, Room in ipairs(RoomsFolder:GetDescendants()) do  
+        if Room:IsA("Model") then  
+            local Entrances = Room:FindFirstChild("Entrances")  
+            if Entrances and Entrances:IsA("Folder") then  
+                local NormalDoor = Entrances:FindFirstChild("NormalDoor")  
+                if NormalDoor and NormalDoor:IsA("Model") then  
+                    local OpenValue = NormalDoor:FindFirstChild("OpenValue")  
+                    if OpenValue and OpenValue:IsA("BoolValue") and OpenValue.Value == false then  
+                        SpawnEntity(NormalDoor:GetPivot())  
+                        return  
+                    end  
+                end  
+            end  
+        end  
+    end
+end
+
+RoomsFolder.DescendantAdded:Connect(function()
+	local currentCount = 0
+
+	for _, v in ipairs(RoomsFolder:GetChildren()) do
+		if v:IsA("Model") then
+			currentCount += 1
+		end
+	end
+
+	if currentCount - InitialRoomModelCount >= 3 then
+    InitialRoomModelCount = currentCount
+
+    if DamageConnection then
+        DamageConnection:Disconnect()
+        DamageConnection = nil
+    end
+
+    if EntityModel and EntityModel.Parent then
+        EntityModel:Destroy()
+    end
+
+    EntityModel = nil
+    EntityInstance = nil
+    Spawned = false
+    LAST_DAMAGE_TIME = 0
+end
+end)
+
+CheckRooms()
