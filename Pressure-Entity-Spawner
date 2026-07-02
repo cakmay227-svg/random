@@ -222,10 +222,16 @@ local activeShaker = initializeBypassedShaker()
 -- =====================================================================
 
 local function loadEntityModel()
-	local objects = game:GetObjects(EntityConfig.AssetId)
-	if #objects == 0 then
-		error("[EntitySystem] Không load được model! AssetId: "..tostring(EntityConfig.AssetId))
-	end
+	local success, objects = pcall(game.GetObjects, game, EntityConfig.AssetId)
+
+if not success then
+    error("Không load được asset: " .. tostring(objects))
+end
+
+if #objects == 0 then
+    error("Asset không trả về object nào")
+end
+
 	local model = objects[1]
 	if not model then
 		error("[EntitySystem] Asset không phải Model!")
