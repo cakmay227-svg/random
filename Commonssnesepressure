@@ -1,0 +1,560 @@
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+
+local ENTITY_ASSET_ID = 136276859671592 -- << Gắn AssetId vào đây
+local MOVE_SPEED = 150
+local HEIGHT_OFFSET = 5
+
+local Rooms = Workspace.GameplayFolder.Rooms
+local SearchlightsEncounter = Rooms:FindFirstChild("SearchlightsEncounter")
+
+local Entity
+local EntityRoot
+local ChooseSafeTarget
+local FrontBlocked
+local EntityNodesFolder
+local SpawnPosition
+local EntityHitbox
+
+local Ready = false
+local LastDirectionChange = tick()
+local CHANGE_INTERVAL = math.random(7, 10) 
+
+local FloorParts = {}
+
+local Alive = true
+local Connections = {}
+
+local InitialRoomModelCount = 0
+
+local function RefreshFloors()
+	if not SearchlightsEncounter then
+		return false
+	end
+
+	table.clear(FloorParts)
+
+	for _, obj in ipairs(SearchlightsEncounter:GetDescendants()) do
+		if obj:IsA("BasePart")
+		and obj.Name == "Floor"
+		and obj.Transparency == 0 then
+			table.insert(FloorParts, obj)
+		end
+	end
+
+	return #FloorParts > 0
+end
+
+local function Cleanup()
+
+	if not Alive then
+		return
+	end
+
+	Alive = false
+
+	for _, connection in ipairs(Connections) do
+		connection:Disconnect()
+	end
+
+	table.clear(Connections)
+	table.clear(FloorParts)
+
+	if Entity then
+		Entity:Destroy()
+	end
+
+if EntityHitbox then
+	EntityHitbox:Destroy()
+	EntityHitbox = nil
+end
+
+	Entity = nil
+	EntityRoot = nil
+end
+
+local function GetRandomFloor()
+
+	if #FloorParts == 0 then
+		return nil
+	end
+
+	return FloorParts[math.random(1, #FloorParts)]
+
+end
+
+local function GetRandomPointOnFloor(floor)
+    local size = floor.Size
+    local cf = floor.CFrame
+    
+    local x = (math.random() - 0.5) * size.X * 0.9
+    local z = (math.random() - 0.5) * size.Z * 0.9
+    
+    -- Tính toán vị trí dựa trên CFrame của sàn để giữ độ cao Y chính xác
+    local point = (cf * CFrame.new(x, size.Y/2 + HEIGHT_OFFSET, z)).Position
+    return point
+end
+
+local function SetEntityPosition(position)
+
+	if not Alive then
+		return
+	end
+
+	if Entity:IsA("Model") then
+
+		Entity:PivotTo(
+			CFrame.new(position)
+		)
+
+	else
+
+		Entity.Position = position
+
+	end
+
+end
+
+local function TryReady()
+	if Ready then
+		return
+	end
+
+	if not SearchlightsEncounter then
+		return
+	end
+
+	if not EntityNodesFolder then
+		EntityNodesFolder = SearchlightsEncounter:FindFirstChild("EntityNodes")
+		if not EntityNodesFolder then
+			return
+		end
+	end
+
+	RefreshFloors()
+
+	if #FloorParts == 0 then
+		return
+	end
+
+	local nodes = {}
+	local exitPart
+
+	for _, obj in ipairs(EntityNodesFolder:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			if obj.Name == "Node" then
+				table.insert(nodes, obj)
+			elseif obj.Name == "Exit" and not exitPart then
+				exitPart = obj
+			end
+		end
+	end
+
+	if #nodes > 0 then
+		SpawnPosition = nodes[math.random(#nodes)].Position
+	elseif exitPart then
+		SpawnPosition = exitPart.Position
+	else
+		return
+	end
+
+	Ready = true
+end
+
+TryReady()
+
+if not Ready then
+
+	table.insert(Connections, Rooms.ChildAdded:Connect(function(child)
+
+	local function CheckEncounter()
+		if child.Name == "SearchlightsEncounter" then
+			SearchlightsEncounter = child
+
+			table.insert(Connections, SearchlightsEncounter.DescendantAdded:Connect(function()
+				TryReady()
+			end))
+
+			TryReady()
+		end
+	end
+
+	CheckEncounter()
+
+	if child:IsA("Model") then
+		table.insert(Connections, child:GetPropertyChangedSignal("Name"):Connect(CheckEncounter))
+	end
+
+end))
+
+for _, child in ipairs(Rooms:GetChildren()) do
+	if child:IsA("Model") then
+		table.insert(Connections, child:GetPropertyChangedSignal("Name"):Connect(function()
+			if child.Name == "SearchlightsEncounter" then
+				SearchlightsEncounter = child
+
+				table.insert(Connections, SearchlightsEncounter.DescendantAdded:Connect(function()
+					TryReady()
+				end))
+
+				TryReady()
+			end
+		end))
+	end
+end
+
+	if SearchlightsEncounter then
+		table.insert(Connections, SearchlightsEncounter.DescendantAdded:Connect(function()
+			TryReady()
+		end))
+
+		TryReady()
+	end
+
+	repeat
+		RunService.Heartbeat:Wait()
+	until Ready
+end
+
+local success, objects = pcall(function()
+	return game:GetObjects("rbxassetid://" .. ENTITY_ASSET_ID)
+end)
+
+if not success or not objects or not objects[1] then
+	error("Failed to load entity.")
+end
+
+Entity = objects[1]
+Entity.Parent = Workspace
+
+if Entity:IsA("Model") then
+	EntityRoot = Entity.PrimaryPart
+
+	if not EntityRoot then
+		EntityRoot =
+			Entity:FindFirstChildWhichIsA("BasePart", true)
+
+		if EntityRoot then
+			Entity.PrimaryPart = EntityRoot
+		end
+	end
+elseif Entity:IsA("BasePart") then
+	EntityRoot = Entity
+else
+	error("Entity must be a Model or BasePart.")
+end
+
+if not EntityRoot then
+	error("No PrimaryPart found.")
+end
+
+EntityHitbox = Instance.new("Part")
+EntityHitbox.Name = "EntityHitbox"
+EntityHitbox.Shape = Enum.PartType.Ball
+EntityHitbox.Size = Vector3.new(15, 15, 15)
+EntityHitbox.Transparency = 1
+EntityHitbox.Anchored = true
+EntityHitbox.CanCollide = false
+EntityHitbox.CanQuery = false
+EntityHitbox.CanTouch = true
+EntityHitbox.Massless = true
+EntityHitbox.Parent = Workspace
+
+if Entity:IsA("Model") then
+	for _, obj in ipairs(Entity:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			obj.CanTouch = true
+		end
+	end
+elseif Entity:IsA("BasePart") then
+	Entity.CanTouch = true
+end
+
+SetEntityPosition(SpawnPosition)
+
+local CurrentFloor = GetRandomFloor()
+
+if not CurrentFloor then
+	Cleanup()
+	error("No floor available.")
+end
+
+CurrentTarget = GetRandomPointOnFloor(CurrentFloor)
+
+local MoveDirection = Vector3.zero
+
+local function PickNextTarget()
+
+	CurrentFloor = GetRandomFloor()
+
+	if not CurrentFloor then
+		Cleanup()
+		return
+	end
+
+	CurrentTarget = GetRandomPointOnFloor(CurrentFloor)
+
+end
+
+table.insert(Connections, RunService.Heartbeat:Connect(function(deltaTime)
+    if not Alive or not EntityRoot or not EntityRoot.Parent then 
+        if Alive then Cleanup() end
+        return 
+    end
+
+    -- 1. Logic đổi hướng tự động mỗi 7-10s
+    if tick() - LastDirectionChange >= CHANGE_INTERVAL then
+        ChooseSafeTarget()
+        LastDirectionChange = tick()
+        CHANGE_INTERVAL = math.random(7, 10)
+    end
+
+    -- 2. Tính toán hướng di chuyển
+    local currentPos = EntityRoot.Position
+    local targetPosXZ = Vector3.new(CurrentTarget.X, currentPos.Y, CurrentTarget.Z)
+    local offset = targetPosXZ - currentPos
+    local distance = offset.Magnitude
+
+    if distance <= 2 then
+        ChooseSafeTarget()
+        return
+    end
+
+    MoveDirection = offset.Unit
+    
+    if FrontBlocked() then
+        ChooseSafeTarget()
+        return
+    end
+
+    -- 3. Di chuyển MƯỢT bằng Lerp
+    -- Smoothness: 0.1 (rất mượt/chậm) đến 0.9 (gần như cứng). 0.2 là mức ổn nhất.
+    -- Di chuyển đúng tốc độ
+-- Di chuyển đúng tốc độ
+local newPosition = currentPos + (MoveDirection * MOVE_SPEED * deltaTime)
+
+-- Chỉ Lerp trục Y
+local newY = currentPos.Y + (CurrentTarget.Y - currentPos.Y) * math.clamp(deltaTime * 8, 0, 1)
+
+newPosition = Vector3.new(
+    newPosition.X,
+    newY,
+    newPosition.Z
+)
+
+-- Quay hướng nhìn mượt
+local targetCFrame = CFrame.lookAt(newPosition, newPosition + MoveDirection)
+
+if Entity:IsA("Model") then
+    Entity:PivotTo(Entity:GetPivot():Lerp(targetCFrame, 0.2))
+else
+    Entity.CFrame = Entity.CFrame:Lerp(targetCFrame, 0.2)
+end
+
+if EntityHitbox then
+	EntityHitbox.CFrame = EntityRoot.CFrame
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+	local character = player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart")
+
+	if hrp and (hrp.Position - EntityHitbox.Position).Magnitude <= 7.5 then
+		HandleTouch(hrp)
+	end
+end
+end))
+
+local FORWARD_CHECK_DISTANCE = 8
+local FLOOR_CHECK_DISTANCE = 10
+
+local RayParams = RaycastParams.new()
+RayParams.FilterType = Enum.RaycastFilterType.Exclude
+RayParams.FilterDescendantsInstances = {Entity}
+RayParams.IgnoreWater = true
+
+local function IsPositionOnFloor(position)
+
+	local result = Workspace:Raycast(
+		position + Vector3.new(0, 5, 0),
+		Vector3.new(0, -30, 0),
+		RayParams
+	)
+
+	if not result then
+		return false
+	end
+
+	local hit = result.Instance
+
+	return hit
+		and hit:IsA("BasePart")
+		and hit.Name == "Floor"
+		and hit.Transparency == 0
+
+end
+
+FrontBlocked = function()
+
+	local origin = EntityRoot.Position
+
+	local direction = MoveDirection
+
+	if direction.Magnitude <= 0 then
+		return true
+	end
+
+	local wallHit = Workspace:Raycast(
+		origin,
+		direction * FORWARD_CHECK_DISTANCE,
+		RayParams
+	)
+
+	if wallHit then
+
+		local hit = wallHit.Instance
+
+		if not (hit.Name == "Floor" and hit.Transparency > 0.1) then
+			return true
+		end
+
+	end
+
+	local frontPos =
+		origin + direction * FLOOR_CHECK_DISTANCE
+
+	if not IsPositionOnFloor(frontPos) then
+		return true
+	end
+
+	return false
+
+end
+
+ChooseSafeTarget = function()
+    for i = 1, 30 do
+        local floor = GetRandomFloor()
+        if floor then
+            local point = GetRandomPointOnFloor(floor)
+            -- Kiểm tra xem điểm này có hợp lệ không
+            if IsPositionOnFloor(point) then
+                CurrentTarget = point
+                CurrentFloor = floor
+                return
+            end
+        end
+    end
+    Cleanup()
+end
+
+local function OnTouchPlayer(player)
+print("Touched:", player.Name)
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local function killOneShot()
+    local damageRemote = ReplicatedStorage:FindFirstChild("LocalDamage", true) or ReplicatedStorage:FindFirstChild("ChangeHealth", true)
+    
+    if damageRemote and damageRemote:IsA("RemoteEvent") then
+        damageRemote:FireServer(100, "SittingItOut", 1, nil)
+        damageRemote:FireServer("Damage", 100)
+        print("ngol")
+    else
+        print("đéo được")
+    end
+end
+
+killOneShot()
+
+task.spawn(function()
+                while true do
+                task.wait(0.5)
+                    local playerGui = game.Players.LocalPlayer.PlayerGui
+    local entityPage = playerGui.Main.AfterDeath.Document.EntityPage
+    local imgLabel = entityPage.DeathFrame.Entities.Button.ImageLabel
+    
+    -- Kiểm tra nếu không có ảnh
+        imgLabel.Image = "rbxassetid://91372134486051" 
+        
+        -- CẬP NHẬT MÀU MỚI TẠI ĐÂY
+        imgLabel.ImageColor3 = Color3.fromRGB(255,255,255) 
+    
+    entityPage.DeathFrame.EntityName.Text = "Common Sense" 
+    playerGui.Main.AfterDeath.Document.ScorePage.OverseerNotes.Text = "Use your common sense."
+                    end
+                end)
+end
+
+local TouchDebounce = {}
+
+local function HandleTouch(hit)
+
+	if not Alive then
+		return
+	end
+
+	local character = hit:FindFirstAncestorOfClass("Model")
+
+	if not character then
+		return
+	end
+
+	local player = Players:GetPlayerFromCharacter(character)
+
+	if not player then
+		return
+	end
+
+	if TouchDebounce[player] then
+		return
+	end
+
+	TouchDebounce[player] = true
+
+	task.spawn(function()
+		OnTouchPlayer(player)
+
+		task.wait(0.2)
+
+		TouchDebounce[player] = nil
+	end)
+
+end
+
+table.insert(Connections, EntityHitbox.Touched:Connect(HandleTouch))
+
+local function GetCurrentRoomModelCount()
+
+	local count = 0
+
+	for _, obj in ipairs(Rooms:GetChildren()) do
+		if obj:IsA("Model") then
+			count += 1
+		end
+	end
+
+	return count
+
+end
+
+-- Đảm bảo lấy số lượng model hiện tại sau khi Rooms đã load
+InitialRoomModelCount = GetCurrentRoomModelCount()
+
+table.insert(Connections, RunService.Heartbeat:Connect(function()
+
+	if not Alive then
+		return
+	end
+
+	local currentCount = GetCurrentRoomModelCount()
+
+	if currentCount >= InitialRoomModelCount + 3 then
+
+		print("Room count increased twice. Destroying entity.")
+
+		Cleanup()
+
+	end
+
+end))
