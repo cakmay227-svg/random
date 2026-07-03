@@ -598,7 +598,6 @@ end
 -- =====================================================================
 despawnEntity = function()
     if entityFinished then return end
-    EntityConfig.OnDespawning()
     entityFinished = true
     
     -- 1. Reset tất cả các biến trạng thái về mặc định
@@ -626,6 +625,10 @@ despawnEntity = function()
     roomAddedConnection:Disconnect()
     roomAddedConnection = nil
 end
+if roomRemovedConnection then
+    roomRemovedConnection:Disconnect()
+    roomRemovedConnection = nil
+end
 
     -- 3. Xử lý Shake System
     if activeShaker then
@@ -641,20 +644,33 @@ end
         end
     end
 
-    -- 5. Thực hiện Tween thoát ẩn và hủy Model
-    -- Lưu ý: Dùng task.spawn để không chặn các lệnh khác nếu cần
-    local tween = TweenService:Create(  
-        rootPart,  
-        TweenInfo.new(2, Enum.EasingStyle.Linear),  
-        { CFrame = rootPart.CFrame - EntityConfig.DespawnYOffset }  
-    )  
-    
-    tween:Play()  
-    tween.Completed:Wait()  
-    
-    if entityModel then 
-        entityModel:Destroy() 
+    local tween = TweenService:Create(
+    rootPart,
+    TweenInfo.new(2, Enum.EasingStyle.Linear),
+    {
+        CFrame = rootPart.CFrame - EntityConfig.DespawnYOffset
+    }
+)
+
+-- Fade out tất cả Sound trong entity khi bắt đầu despawn
+for _, obj in ipairs(entityModel:GetDescendants()) do
+    if obj:IsA("Sound") then
+        TweenService:Create(
+            obj,
+            TweenInfo.new(5, Enum.EasingStyle.Linear),
+            {
+                Volume = 0
+            }
+        ):Play()
     end
+end
+
+tween:Play()
+tween.Completed:Wait()
+
+if entityModel then
+    entityModel:Destroy()
+end
     
     EntityConfig.OnDespawned()
 end
@@ -686,6 +702,32 @@ local function extractPathNodes(nodesFolder)
     return path
 end
 
+local function cacheRoomNodes(room)
+    cachedRoom = room
+    cachedRoomNodes = {}
+
+    if not room then
+        return
+    end
+
+    local nodesFolder = room:FindFirstChild("EntityNodes", true)
+    if not nodesFolder then
+        return
+    end
+
+    local path = extractPathNodes(nodesFolder)
+
+    if EntityConfig.Reversed then
+        for i = #path, 1, -1 do
+            table.insert(cachedRoomNodes, path[i])
+        end
+    else
+        for _, node in ipairs(path) do
+            table.insert(cachedRoomNodes, node)
+        end
+    end
+end
+
  -- Biến này để chặn hitbox khi đang delay
 
 local logs = {}
@@ -708,9 +750,12 @@ end
 
 local currentPath = {}
 local currentNode = nil
+local cachedRoomNodes = {}
+local cachedRoom = nil
 local currentIndex = 1
 local currentDirection = 1
 local roomAddedConnection
+local roomRemovedConnection
 
 local function traverseNodes(nodesFolder)
     currentPath = (typeof(nodesFolder) == "table") and nodesFolder or extractPathNodes(nodesFolder)
@@ -731,7 +776,6 @@ local function traverseNodes(nodesFolder)
     
     -- 2. Khởi tạo hướng và index dựa trên chế độ Reversed
     local direction = 1
-local currentIndex = 1
     local reboundsDone = 0
 
     -- 3. Spawn và Snap an toàn (tránh lỗi bay)
@@ -821,12 +865,16 @@ end
 if room and room ~= lastRoom then
     lastRoom = room
 
+    cacheRoomNodes(room)
+
     EntityConfig.OnRoomEnter(room.Name)
 end
         end
     end
 
-    log("WHILE ENDED -> DESPAWN")
+    log("WHILE ENDED")
+
+EntityConfig.OnDespawning()
 despawnEntity()
 end
 
@@ -891,30 +939,57 @@ local function buildFullPath()
     return fullPath
 end
 
+local function findClosestNode(path)
+    if not rootPart then
+        return 1
+    end
+
+    local closestIndex = 1
+    local closestDistance = math.huge
+
+    for i, node in ipairs(path) do
+        if node and node.Parent then
+            local dist = (rootPart.Position - node.Position).Magnitude
+
+            if dist < closestDistance then
+                closestDistance = dist
+                closestIndex = i
+            end
+        end
+    end
+
+    return closestIndex
+end
+
 local function refreshCurrentPath()
     if entityFinished then
         return
     end
 
-    if not currentNode then
+    local newPath = buildFullPath()
+
+    if #newPath == 0 then
         return
     end
 
-    local newPath = buildFullPath()
-
     local foundIndex
 
-    for i, node in ipairs(newPath) do
-        if node == currentNode then
-            foundIndex = i
-            break
+    if currentNode and currentNode.Parent then
+        for i, node in ipairs(newPath) do
+            if node == currentNode then
+                foundIndex = i
+                break
+            end
         end
     end
 
-    if foundIndex then
-        currentPath = newPath
-        currentIndex = foundIndex
+    if not foundIndex then
+        foundIndex = findClosestNode(newPath)
     end
+
+    currentPath = newPath
+    currentIndex = foundIndex
+    currentNode = currentPath[currentIndex]
 end
 
 local function runEntityBehavior()
@@ -929,6 +1004,21 @@ local function runEntityBehavior()
             refreshCurrentPath()
         end
     end)
+    
+    if roomRemovedConnection then
+    roomRemovedConnection:Disconnect()
+end
+
+roomRemovedConnection = Rooms.ChildRemoved:Connect(function(room)
+    if room == cachedRoom then
+        currentPath = cachedRoomNodes
+        currentIndex = 1
+        currentNode = currentPath[1]
+    else
+        task.wait(0.2)
+        refreshCurrentPath()
+    end
+end)
 
     traverseNodes(buildFullPath())
 end
