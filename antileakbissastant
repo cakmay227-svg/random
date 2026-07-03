@@ -2,6 +2,8 @@ local Whitelist = {
 	["Guesttheguest234"] = true,
 	["vuivuiviu2"] = true,
 	["vuivuiviu3"] = true,
+    ["Inc0mu_8640"] = true,
+    ["ALXDAVID0"] = true,
 }
 
 local player = game:GetService("Players").LocalPlayer
