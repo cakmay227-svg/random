@@ -1,0 +1,15 @@
+local Whitelist = {
+	["Guesttheguest234"] = true,
+	["vuivuiviu2"] = true,
+	["vuivuiviu3"] = true,
+}
+
+local player = game:GetService("Players").LocalPlayer
+
+if Whitelist[player.Name] then
+task.spawn(function() 
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/bissastant%20mode"))() 
+end) 
+else
+	require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption("Try to get 3 WINS on our server first then use the script lmao.",true)
+end
