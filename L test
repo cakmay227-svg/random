@@ -325,7 +325,6 @@ local function executeJumpscare()
     if EntityConfig.DeathImage == "" or EntityConfig.DeathImage == "rbxassetid://0" then
         imgLabel.BackgroundTransparency = 1
     else
-        imgLabel.BackgroundTransparency = 0
         imgLabel.Image = EntityConfig.DeathImage
         
         -- CẬP NHẬT MÀU MỚI TẠI ĐÂY
@@ -623,6 +622,10 @@ despawnEntity = function()
         proximityConnection:Disconnect() 
         proximityConnection = nil 
     end
+    if roomAddedConnection then
+    roomAddedConnection:Disconnect()
+    roomAddedConnection = nil
+end
 
     -- 3. Xử lý Shake System
     if activeShaker then
@@ -703,13 +706,22 @@ local function copyLogs()
     end
 end
 
+local currentPath = {}
+local currentNode = nil
+local currentIndex = 1
+local currentDirection = 1
+local roomAddedConnection
+
 local function traverseNodes(nodesFolder)
-    local path = (typeof(nodesFolder) == "table") and nodesFolder or extractPathNodes(nodesFolder)
-    if #path == 0 then return end
+    currentPath = (typeof(nodesFolder) == "table") and nodesFolder or extractPathNodes(nodesFolder)
+
+    if #currentPath == 0 then
+        return
+    end
     
     local lastRoom = nil
     
-    log("PATH SIZE:", #path)
+    log("PATH SIZE:", #currentPath)
 
     -- 1. Tính toán số vòng rebound ngẫu nhiên
     local totalRebounds = EntityConfig.Rebounding and math.random(EntityConfig.MinRebounds or 1, EntityConfig.MaxRebounds or 1) or 0
@@ -752,7 +764,7 @@ local currentIndex = 1
         local nextIndex = currentIndex + direction
 
               -- 4. Logic chạm biên (Rebound)
-        if (nextIndex < 1 or nextIndex > #path) then
+        if (nextIndex < 1 or nextIndex > #currentPath) then
             if not EntityConfig.Rebounding then break end
 
             -- Nếu đã đủ số vòng, thoát luôn
@@ -783,7 +795,8 @@ end
         end        
 
         currentIndex = nextIndex
-        local targetNode = path[currentIndex]
+        currentNode = currentPath[currentIndex]
+        local targetNode = currentPath[currentIndex]
 
         if targetNode then
             local targetPos = targetNode.Position + EntityConfig.YOffset
@@ -854,7 +867,7 @@ local function getOrderedRooms()
     return orderedList
 end
 
-local function runEntityBehavior()
+local function buildFullPath()
     local roomsList = getOrderedRooms()
     local fullPath = {}
 
@@ -862,8 +875,7 @@ local function runEntityBehavior()
         local nodesFolder = room:FindFirstChild("EntityNodes", true)
         if nodesFolder then
             local roomPath = extractPathNodes(nodesFolder)
-            
-            -- Nếu Reversed, đảo ngược danh sách node của từng phòng để bắt đầu từ Exit
+
             if EntityConfig.Reversed then
                 for i = #roomPath, 1, -1 do
                     table.insert(fullPath, roomPath[i])
@@ -876,8 +888,49 @@ local function runEntityBehavior()
         end
     end
 
-    if #fullPath == 0 then return end
-    traverseNodes(fullPath)
+    return fullPath
+end
+
+local function refreshCurrentPath()
+    if entityFinished then
+        return
+    end
+
+    if not currentNode then
+        return
+    end
+
+    local newPath = buildFullPath()
+
+    local foundIndex
+
+    for i, node in ipairs(newPath) do
+        if node == currentNode then
+            foundIndex = i
+            break
+        end
+    end
+
+    if foundIndex then
+        currentPath = newPath
+        currentIndex = foundIndex
+    end
+end
+
+local function runEntityBehavior()
+
+    if roomAddedConnection then
+        roomAddedConnection:Disconnect()
+    end
+
+    roomAddedConnection = Rooms.ChildAdded:Connect(function(room)
+        if room:IsA("Model") then
+            task.wait(0.2)
+            refreshCurrentPath()
+        end
+    end)
+
+    traverseNodes(buildFullPath())
 end
 
 -- =====================================================================
