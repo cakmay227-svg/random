@@ -736,7 +736,7 @@ local currentIndex = 1
 
     -- 3. Spawn và Snap an toàn (tránh lỗi bay)
     if not entityModel:GetAttribute("Spawned") then
-        local startCFrame = path[currentIndex].CFrame + EntityConfig.YOffset
+        local startCFrame = currentPath[currentIndex].CFrame + EntityConfig.YOffset
         entityModel:PivotTo(startCFrame)
         entityModel:SetAttribute("Spawned", true)
         
