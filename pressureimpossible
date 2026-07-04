@@ -5,6 +5,7 @@ local Whitelist = {
     ["wxxTYazjjtg"] = true,
     ["iamproalt576667"] = true,
     ["iampro576672"] = true,
+    ["PressureMode3"] = true,
 }
 
 local player = game:GetService("Players").LocalPlayer
