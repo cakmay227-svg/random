@@ -675,7 +675,7 @@ local function StartDoorCheck()
 			local opened = doors.Value - startValue
 
 			-- Ch teleport  ln m ca 1 v� 2
-			if opened < 3 and model and model.Parent then
+			if opened < 2 and model and model.Parent then
 
 				local character = Player.Character
 				local hrp = character and character:FindFirstChild("HumanoidRootPart")
@@ -738,7 +738,7 @@ teleportPos = Vector3.new(
 			end
 
 			-- n ca th 3 th� kh�ng teleport na
-			if opened >= 3 then
+			if opened >= 2 then
 				EndEntity()
 			end
 
@@ -872,6 +872,17 @@ end
 
 task.spawn(function() 
 CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/nomoregames.mp3?raw=true",
+    3,
+    "beat",
+    "beatSound",
+    workspace,
+    true
+)
+end) 
+
+task.spawn(function() 
+CustomGitSound(
     "https://github.com/cakmay227-svg/random/raw/refs/heads/main/start.mp3?raw=true",
     4,
     "spawn",
@@ -879,17 +890,6 @@ CustomGitSound(
     model.FrostyNew,
     false
 )
-
-task.spawn(function() 
-CustomGitSound(
-    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/cinematicStart.mp3?raw=true",
-    3,
-    "wow",
-    "wowSound",
-    workspace,
-    false
-)
-end) 
 
 model.FrostyNew.spawnSound.Ended:Connect(function() 
 task.spawn(function() 
@@ -900,17 +900,6 @@ CustomGitSound(
     "cinematicSound",
     model.FrostyNew,
     false
-)
-end) 
-
-task.spawn(function() 
-CustomGitSound(
-    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/beat.mp3?raw=true",
-    3,
-    "beat",
-    "beatSound",
-    workspace,
-    true
 )
 end) 
 
