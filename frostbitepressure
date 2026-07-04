@@ -1,0 +1,955 @@
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local WalkSpeedLoopConnection
+local model
+local DoorsConnection
+local CameraShaker
+local Ended = false
+local StopPointLightPulse
+local EndEntity
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+local Lighting = game:GetService("Lighting")
+
+local colorCorrection = Lighting:FindFirstChild("FrostyColorCorrection")
+
+if not colorCorrection then
+	colorCorrection = Instance.new("ColorCorrectionEffect")
+	colorCorrection.Name = "FrostyColorCorrection"
+	colorCorrection.TintColor = Color3.fromRGB(255, 255, 255)
+	colorCorrection.Parent = Lighting
+end
+
+local BlackoutRange = 50
+local CameraShakeRange = 100
+
+local Config = {
+	FlickerSpeed = 75,
+	MaxDarkness = 0.2
+}
+
+local ShakeConfig = {
+	Intensity = 5,
+	SpeedMultiplier = 2
+}
+
+local ASSET_ID = 74584796190042
+local SPAWN_DISTANCE = 17
+local Y_OFFSET = 9
+
+function GitAud(soundgit, filename)
+    local url = soundgit
+    local FileName = filename
+
+    writefile(FileName .. ".mp3", game:HttpGet(url))
+    return (getcustomasset or getsynasset)(FileName .. ".mp3")
+end
+
+function CustomGitSound(soundlink, volume, filename, soundName, parent, looped)
+    local sound = Instance.new("Sound")
+
+    sound.SoundId = GitAud(soundlink, filename)
+    sound.Parent = parent or workspace
+    sound.Volume = volume or 1
+    sound.RollOffMaxDistance = 400
+    sound.RollOffMinDistance = 5
+    sound.PlaybackSpeed = 1
+    sound.Name = soundName or "bgtheme"
+    sound.Looped = looped or false
+
+    sound:Play()
+
+    return sound
+end
+
+local function PlayerInRange(origin, range)
+	local character = Player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart")
+
+	if not hrp or not origin then
+		return false
+	end
+
+	return (hrp.Position - origin.Position).Magnitude <= range
+end
+
+local function getOrCreateBlackoutGui()
+	local gui = PlayerGui:FindFirstChild("PressureBlackoutGui")
+
+	if not gui then
+		gui = Instance.new("ScreenGui")
+		gui.Name = "PressureBlackoutGui"
+		gui.IgnoreGuiInset = true
+		gui.ResetOnSpawn = false
+		gui.Parent = PlayerGui
+
+		local frame = Instance.new("Frame")
+		frame.Name = "BlackFrame"
+		frame.Size = UDim2.fromScale(1, 1)
+		frame.BackgroundColor3 = Color3.new(0, 0, 0)
+		frame.BorderSizePixel = 0
+		frame.BackgroundTransparency = 1
+		frame.Parent = gui
+	end
+
+	return gui.BlackFrame
+end
+
+local blackoutConnection
+
+local function StartBlackout(originPart)
+	local blackFrame = getOrCreateBlackoutGui()
+
+	if blackoutConnection then
+		blackoutConnection:Disconnect()
+	end
+
+	blackoutConnection = RunService.RenderStepped:Connect(function()
+		if not originPart or not originPart.Parent then
+			blackFrame.BackgroundTransparency = 1
+
+			blackoutConnection:Disconnect()
+			blackoutConnection = nil
+			return
+		end
+
+		if PlayerInRange(originPart, BlackoutRange) then
+			local wave = math.sin(os.clock() * Config.FlickerSpeed)
+			local weight = (wave + 1) / 2
+
+			blackFrame.BackgroundTransparency = 1 - (weight * Config.MaxDarkness)
+		else
+			blackFrame.BackgroundTransparency = 1
+		end
+	end)
+end
+
+local function initializeBypassedShaker(originPart)
+	local playerCamera = workspace.CurrentCamera
+	if not playerCamera then
+		return nil
+	end
+
+	local currentCFrame = playerCamera.CFrame
+
+	local function cameraCallback(shakeCFrame)
+		playerCamera.CFrame = currentCFrame * shakeCFrame
+	end
+
+	local shaker = {
+		_running = true,
+		_renderName = "FrostyCameraShake_" .. tostring(math.random(1,9999999)),
+		_renderPriority = Enum.RenderPriority.Camera.Value + 1,
+		_camShakeInstances = {},
+		_removeInstances = {},
+		_callback = cameraCallback
+	}
+
+	RunService:BindToRenderStep(shaker._renderName, shaker._renderPriority, function(dt)
+
+		currentCFrame = playerCamera.CFrame
+
+		if not originPart or not originPart.Parent then
+			RunService:UnbindFromRenderStep(shaker._renderName)
+			return
+		end
+
+		if not PlayerInRange(originPart, CameraShakeRange) then
+			return
+		end
+
+		local posAccumulator = Vector3.zero
+		local rotAccumulator = Vector3.zero
+
+		for i = 1,#shaker._camShakeInstances do
+
+			local inst = shaker._camShakeInstances[i]
+
+			if inst.currentFadeTime <= 0 and not inst.sustain then
+				table.insert(shaker._removeInstances,i)
+			else
+
+				local deltaTick = inst.tick
+				local fadeTime = inst.currentFadeTime
+
+				local noise = Vector3.new(
+					math.noise(deltaTick,0)*0.5,
+					math.noise(0,deltaTick)*0.5,
+					math.noise(deltaTick,deltaTick)*0.5
+				)
+
+				if inst.fadeInDuration>0 and inst.sustain then
+					if fadeTime<1 then
+						fadeTime += dt/inst.fadeInDuration
+					end
+				end
+
+				if not inst.sustain then
+					fadeTime -= dt/inst.fadeOutDuration
+				end
+
+				if inst.sustain then
+					inst.tick += dt*inst.Roughness*inst.roughMod
+				else
+					inst.tick += dt*inst.Roughness*inst.roughMod*fadeTime
+				end
+
+				inst.currentFadeTime = math.clamp(fadeTime,0,1)
+
+				local shake = noise*inst.Magnitude*inst.magnMod*fadeTime
+
+				posAccumulator += shake*inst.PositionInfluence
+				rotAccumulator += shake*inst.RotationInfluence
+			end
+		end
+
+		for i=#shaker._removeInstances,1,-1 do
+			table.remove(shaker._camShakeInstances,shaker._removeInstances[i])
+			shaker._removeInstances[i]=nil
+		end
+
+		local cf =
+			CFrame.new(posAccumulator)
+			* CFrame.Angles(0,math.rad(rotAccumulator.Y),0)
+			* CFrame.Angles(math.rad(rotAccumulator.X),0,math.rad(rotAccumulator.Z))
+
+		shaker._callback(cf)
+
+	end)
+
+	return shaker
+end
+
+local function StartCameraShake(originPart)
+
+	local shaker = initializeBypassedShaker(originPart)
+
+	if not shaker then
+		return
+	end
+
+	table.insert(shaker._camShakeInstances,{
+		Magnitude = 0.4,
+		Roughness = 20,
+		PositionInfluence = Vector3.new(0,0.15,0),
+		RotationInfluence = Vector3.new(1.25,0,4),
+
+		roughMod = ShakeConfig.SpeedMultiplier,
+		magnMod = ShakeConfig.Intensity,
+
+		fadeOutDuration = 0.5,
+		fadeInDuration = 2,
+
+		sustain = true,
+		currentFadeTime = 0,
+
+		tick = Random.new():NextNumber(-100,100)
+	})
+
+	return shaker
+end
+
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local urSpecialEffects = replicatedStorage:WaitForChild("Events"):WaitForChild("URSpecialEffects")
+
+local function getConnectionsFromSignal(signal)
+    if getconnections then return getconnections(signal) end
+    if get_signal_cons then return get_signal_cons(signal) end
+    
+    local success, result = pcall(function() return signal:GetConnections() end)
+    if success then return result end
+    
+    local success2, result2 = pcall(function() return signal:getconnections() end)
+    if success2 then return result2 end
+    
+    return nil
+end
+
+local function fireOriginalFlicker(connections, lightPartsList)
+    for _, lightPart in pairs(lightPartsList) do
+        local randomDuration = math.random(2, 12)
+        for _, connection in pairs(connections) do
+            if connection.Function then
+                task.spawn(connection.Function, "NeonFlicker", lightPart, randomDuration)
+            end
+        end
+    end
+end
+
+local function StartInfiniteFlicker()
+	if FlickerEnabled then
+		return
+	end
+
+	FlickerEnabled = true
+
+	task.spawn(function()
+		while FlickerEnabled do
+			local connections = getConnectionsFromSignal(urSpecialEffects.OnClientEvent)
+
+			if connections and #connections > 0 then
+				local validLights = {}
+
+				for _, v in ipairs(workspace:GetDescendants()) do
+					if v.Name == "Lights" then
+						for _, lightPart in ipairs(v:GetChildren()) do
+							if lightPart.Name ~= "OceanNeon"
+								and lightPart.Name ~= "Delete"
+								and lightPart.Name ~= "RidgeNeon"
+								and not lightPart:GetAttribute("TricksterSign") then
+
+								table.insert(validLights, lightPart)
+							end
+						end
+					end
+				end
+
+				if #validLights > 0 then
+					fireOriginalFlicker(connections, validLights)
+				end
+			end
+
+			task.wait(math.random(20,60)/100)
+		end
+	end)
+end
+
+local function StopInfiniteFlicker()
+	FlickerEnabled = false
+end
+
+local function StartColorEffect()
+	TweenService:Create(
+		colorCorrection,
+		TweenInfo.new(10, Enum.EasingStyle.Linear),
+		{
+			TintColor = Color3.fromRGB(3, 23, 252)
+		}
+	):Play()
+end
+
+local HealthOriginalColors = {}
+local HealthColorsChanged = false
+
+local function ApplyHealthBlue()
+	if HealthColorsChanged then
+		return
+	end
+
+	local healthFrame = Player.PlayerGui:WaitForChild("Main"):WaitForChild("Health")
+
+	for _, obj in ipairs(healthFrame:GetDescendants()) do
+		if obj:IsA("Frame") then
+			HealthOriginalColors[obj] = obj.BackgroundColor3
+			obj.BackgroundColor3 = Color3.fromRGB(40, 110, 200)
+		elseif obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+			HealthOriginalColors[obj] = obj.TextColor3
+			obj.TextColor3 = Color3.fromRGB(40, 110, 200)
+		elseif obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+			HealthOriginalColors[obj] = obj.ImageColor3
+			obj.ImageColor3 = Color3.fromRGB(40, 110, 200)
+		elseif obj:IsA("UIStroke") then
+			HealthOriginalColors[obj] = obj.Color
+			obj.Color = Color3.fromRGB(40, 110, 200)
+		end
+	end
+
+	HealthColorsChanged = true
+end
+
+local function RestoreHealthColors()
+	if not HealthColorsChanged then
+		return
+	end
+
+	for obj, color in pairs(HealthOriginalColors) do
+		if obj and obj.Parent then
+			if obj:IsA("Frame") then
+				obj.BackgroundColor3 = color
+			elseif obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+				obj.TextColor3 = color
+			elseif obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+				obj.ImageColor3 = color
+			elseif obj:IsA("UIStroke") then
+				obj.Color = color
+			end
+		end
+	end
+
+	table.clear(HealthOriginalColors)
+	HealthColorsChanged = false
+end
+
+-- Th�m bin lu tr WalkSpeed gc
+local OriginalWalkSpeed = game.Players.LocalPlayer.Character.Humanoid.WalkSpeed -- Gi� tr mc nh thng l� 16
+
+local function StartWalkSpeedLoop()
+	-- Lu li WalkSpeed hin ti trc khi ghi �
+	local character = Player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		OriginalWalkSpeed = humanoid.WalkSpeed
+	end
+
+	if WalkSpeedLoopConnection then
+		WalkSpeedLoopConnection:Disconnect()
+	end
+
+	WalkSpeedLoopConnection = RunService.RenderStepped:Connect(function()
+		local char = Player.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+		if hum then
+			hum.WalkSpeed = 10
+		end
+	end)
+end
+
+local function StopWalkSpeedLoop()
+	if WalkSpeedLoopConnection then
+		WalkSpeedLoopConnection:Disconnect()
+		WalkSpeedLoopConnection = nil
+	end
+	
+	-- Kh�i phc WalkSpeed gc
+	local character = Player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.WalkSpeed = OriginalWalkSpeed
+	end
+end
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local deathUiLoopRunning = false
+
+local function KillPlayer()
+
+print("KillPlayer called")
+
+	local function killOneShot()
+		local damageRemote =
+			ReplicatedStorage:FindFirstChild("LocalDamage", true)
+			or ReplicatedStorage:FindFirstChild("ChangeHealth", true)
+
+		if damageRemote and damageRemote:IsA("RemoteEvent") then
+			damageRemote:FireServer(2, "SittingItOut", 1, nil)
+			damageRemote:FireServer("Damage", 2)
+			print("ngol")
+		else
+			print("�o c")
+		end
+	end
+
+	killOneShot()
+
+	task.delay(1,function()
+
+		local playerGui = Players.LocalPlayer.PlayerGui
+		local healthLabel = playerGui.Main.Health.TextLabel
+
+		if tonumber(healthLabel.Text) == 0 and not deathUiLoopRunning then
+
+			deathUiLoopRunning = true
+			
+			EndEntity() 
+
+			task.spawn(function()
+
+				while deathUiLoopRunning do
+
+					local entityPage = playerGui.Main.AfterDeath.Document.EntityPage
+					local imgLabel = entityPage.DeathFrame.Entities.Button.ImageLabel
+
+					imgLabel.Image = "rbxassetid://90386326027042"
+					imgLabel.ImageColor3 = Color3.fromRGB(255,255,255)
+
+					entityPage.DeathFrame.EntityName.Text = "FROSTBITE"
+					playerGui.Main.AfterDeath.Document.ScorePage.OverseerNotes.Text = "It's so cold here... "
+
+					task.wait(0.5)
+				end
+
+			end)
+
+		end
+
+	end)
+
+end
+
+local function GetCharacterModel()
+
+	local folder = workspace.GameplayFolder:FindFirstChild("Characters")
+	if not folder then
+		return nil
+	end
+
+	local player = Players.LocalPlayer
+
+	for _,v in ipairs(folder:GetChildren()) do
+	print("Found model:", v.Name)
+
+	if v:IsA("Model") then
+		if v.Name == player.Name or v.Name == player.DisplayName then
+			print("Matched:", v.Name)
+			return v
+		end
+	end
+end
+
+print("Character model not found")
+
+	return nil
+
+end
+
+local function LanternReady(characterModel)
+	if not characterModel then
+		return false
+	end
+
+	for _, obj in ipairs(characterModel:GetDescendants()) do
+		if obj:IsA("ParticleEmitter") and obj.Name == "ParticleEmitter" and obj.Enabled == true then
+			return obj.Enabled
+		end
+	end
+
+	return false
+end
+
+local lanternLoopRunning = false
+
+local function StartLanternCheck()
+
+	if lanternLoopRunning then
+		return
+	end
+
+	lanternLoopRunning = true
+	
+	print("StartLanternCheck called")
+
+	task.spawn(function()
+
+		while lanternLoopRunning and model and model.Parent do
+		print("Lantern loop tick")
+
+			local characterModel = GetCharacterModel()
+
+			local ready = LanternReady(characterModel)
+print("LanternReady =", ready)
+
+if ready then
+				deathUiLoopRunning = false
+			else
+				KillPlayer()
+			end
+
+			task.wait(0.7)
+
+		end
+
+	end)
+
+end
+
+local function StopLanternCheck()
+	lanternLoopRunning = false
+	deathUiLoopRunning = false
+end
+
+EndEntity = function()
+
+	if Ended then
+		return
+	end
+
+	Ended = true
+	
+    RestoreHealthColors()
+	StopLanternCheck()
+	StopInfiniteFlicker()
+	StopWalkSpeedLoop()
+	StopPointLightPulse()
+
+	if blackoutConnection then
+		blackoutConnection:Disconnect()
+		blackoutConnection = nil
+	end
+	
+	if CameraShaker then
+	RunService:UnbindFromRenderStep(CameraShaker._renderName)
+	CameraShaker = nil
+end
+
+	if model and model:FindFirstChild("FrostyNew") then
+
+		model.FrostyNew.Attachment.face.Enabled = false
+		model.FrostyNew.Attachment.Heylois.Enabled = false
+		
+		task.spawn(function() 
+CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/despawn.mp3?raw=true",
+    2,
+    "despawn",
+    "despawnSound",
+    workspace,
+    false
+)
+end) 
+
+task.spawn(function() 
+local beat = workspace:WaitForChild("beatSound") 
+beat:Destroy() 
+end) 
+
+		local scream = model.FrostyNew:FindFirstChild("screamingSound")
+
+		if scream then
+			TweenService:Create(
+				scream,
+				TweenInfo.new(3, Enum.EasingStyle.Linear),
+				{
+					PlaybackSpeed = 0
+				}
+			):Play()
+		end
+	end
+
+	if colorCorrection then
+
+		local tween = TweenService:Create(
+			colorCorrection,
+			TweenInfo.new(3, Enum.EasingStyle.Linear),
+			{
+				TintColor = Color3.fromRGB(255,255,255)
+			}
+		)
+
+		tween:Play()
+
+		tween.Completed:Once(function()
+			if colorCorrection then
+				colorCorrection:Destroy()
+			end
+		end)
+
+	end
+
+	if DoorsConnection then
+		DoorsConnection:Disconnect()
+		DoorsConnection = nil
+	end
+	
+	task.wait(2)
+	
+	model:Destroy()
+
+end
+
+local function StartDoorCheck()
+
+	local doors = Player:WaitForChild("PlayerFolder"):WaitForChild("DoorsOpened")
+
+	local startValue = doors.Value
+	local lastValue = startValue
+
+	if DoorsConnection then
+		DoorsConnection:Disconnect()
+	end
+
+	DoorsConnection = doors:GetPropertyChangedSignal("Value"):Connect(function()
+
+		if Ended then
+			return
+		end
+
+		-- Ch x l� khi DoorsOpened tng
+		if doors.Value > lastValue then
+
+			local opened = doors.Value - startValue
+
+			-- Ch teleport  ln m ca 1 v� 2
+			if opened < 3 and model and model.Parent then
+
+				local character = Player.Character
+				local hrp = character and character:FindFirstChild("HumanoidRootPart")
+
+				if hrp then
+
+					task.wait(1)
+
+local character = Player.Character
+local hrp = character and character:FindFirstChild("HumanoidRootPart")
+
+if not hrp then
+	return
+end
+
+local rayParams = RaycastParams.new()
+rayParams.FilterType = Enum.RaycastFilterType.Exclude
+rayParams.FilterDescendantsInstances = {character, model}
+rayParams.IgnoreWater = true
+
+local rayOrigin = hrp.Position + Vector3.new(0, 2, 0)
+
+local result = Workspace:Raycast(
+	rayOrigin,
+	hrp.CFrame.LookVector * SPAWN_DISTANCE,
+	rayParams
+)
+
+local teleportPos
+
+if result then
+	teleportPos = result.Position - hrp.CFrame.LookVector
+else
+	teleportPos = hrp.Position + hrp.CFrame.LookVector * SPAWN_DISTANCE
+end
+
+teleportPos = Vector3.new(
+	teleportPos.X,
+	hrp.Position.Y + Y_OFFSET,
+	teleportPos.Z
+)
+
+					if model:IsA("Model") then
+						local _, size = model:GetBoundingBox()
+
+						model:PivotTo(
+							CFrame.new(
+								teleportPos + Vector3.new(0, size.Y / 2, 0),
+								teleportPos + Vector3.new(0, size.Y / 2, 0) + hrp.CFrame.LookVector
+							)
+						)
+					elseif model:IsA("BasePart") then
+						model.CFrame = CFrame.new(
+							teleportPos + Vector3.new(0, model.Size.Y / 2, 0),
+							teleportPos + Vector3.new(0, model.Size.Y / 2, 0) + hrp.CFrame.LookVector
+						)
+					end
+
+				end
+			end
+
+			-- n ca th 3 th� kh�ng teleport na
+			if opened >= 3 then
+				EndEntity()
+			end
+
+		end
+
+		lastValue = doors.Value
+
+	end)
+
+end
+
+local PointLightPulseRunning = false
+
+local player = Players.LocalPlayer or Players:GetPlayers()[1] -- i nu cn
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+local rayParams = RaycastParams.new()
+rayParams.FilterType = Enum.RaycastFilterType.Exclude
+rayParams.FilterDescendantsInstances = {character}
+rayParams.IgnoreWater = true
+
+local result = Workspace:Raycast(
+	hrp.Position,
+	hrp.CFrame.LookVector * SPAWN_DISTANCE,
+	rayParams
+)
+
+local spawnPos
+
+if result then
+	-- Spawn s�t tng (l�i 1 stud)
+	spawnPos = result.Position - hrp.CFrame.LookVector
+else
+	-- Spawn 15 studs ph�a trc
+	spawnPos = hrp.Position + hrp.CFrame.LookVector * SPAWN_DISTANCE
+end
+
+-- Gi Y theo HumanoidRootPart + offset
+spawnPos = Vector3.new(
+	spawnPos.X,
+	hrp.Position.Y + Y_OFFSET,
+	spawnPos.Z
+)
+
+model = game:GetObjects("rbxassetid://" .. ASSET_ID)[1]
+if not model then
+	warn("Kh�ng load c model.")
+	return
+end
+
+model.Parent = Workspace
+model:ScaleTo(1.5)
+model.FrostyNew.Attachment.face.Color = ColorSequence.new(Color3.new(0, 0, 0))
+model.FrostyNew.Attachment.Heylois.Enabled = false
+
+local TweenService = game:GetService("TweenService")
+
+local pointLightRanges = {}
+
+for _, obj in ipairs(model:GetDescendants()) do
+	if obj:IsA("PointLight") then
+		pointLightRanges[obj] = obj.Range
+		obj.Range = 0
+	end
+end
+
+local function StartPointLightPulse()
+	if PointLightPulseRunning then
+		return
+	end
+
+	PointLightPulseRunning = true
+
+	for _, light in ipairs(model.FrostyNew:GetDescendants()) do
+		if light:IsA("PointLight") then
+			task.spawn(function()
+				local originalRange = light.Range
+
+				while PointLightPulseRunning and light.Parent do
+					local tweenOut = TweenService:Create(
+						light,
+						TweenInfo.new(4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+						{
+							Range = originalRange + 100
+						}
+					)
+
+					tweenOut:Play()
+					tweenOut.Completed:Wait()
+
+					if not PointLightPulseRunning or not light.Parent then
+						break
+					end
+
+					local tweenBack = TweenService:Create(
+						light,
+						TweenInfo.new(4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
+						{
+							Range = originalRange
+						}
+					)
+
+					tweenBack:Play()
+					tweenBack.Completed:Wait()
+				end
+			end)
+		end
+	end
+end
+
+StopPointLightPulse = function() 
+	PointLightPulseRunning = false
+end
+
+if model:IsA("Model") then
+	-- Ly chiu cao model
+	local _, size = model:GetBoundingBox()
+
+	-- N�ng model l�n th�m na chiu cao  tr�nh chui xung t
+	local finalPos = spawnPos + Vector3.new(0, size.Y / 2, 0)
+
+	model:PivotTo(CFrame.new(finalPos, finalPos + hrp.CFrame.LookVector))
+
+elseif model:IsA("BasePart") then
+	model.CFrame = CFrame.new(
+		spawnPos + Vector3.new(0, model.Size.Y / 2, 0),
+		spawnPos + Vector3.new(0, model.Size.Y / 2, 0) + hrp.CFrame.LookVector
+	)
+end
+
+task.spawn(function() 
+CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/start.mp3?raw=true",
+    4,
+    "spawn",
+    "spawnSound",
+    model.FrostyNew,
+    false
+)
+
+task.spawn(function() 
+CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/cinematicStart.mp3?raw=true",
+    3,
+    "wow",
+    "wowSound",
+    workspace,
+    false
+)
+end) 
+
+model.FrostyNew.spawnSound.Ended:Connect(function() 
+task.spawn(function() 
+CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/cinematic.mp3?raw=true",
+    8,
+    "cinematic",
+    "cinematicSound",
+    model.FrostyNew,
+    false
+)
+end) 
+
+task.spawn(function() 
+CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/beat.mp3?raw=true",
+    3,
+    "beat",
+    "beatSound",
+    workspace,
+    true
+)
+end) 
+
+model.FrostyNew.Attachment.face.Color = ColorSequence.new(Color3.new(1, 1, 1))
+model.FrostyNew.Attachment.Heylois.Enabled = true
+
+for light, originalRange in pairs(pointLightRanges) do
+	TweenService:Create(
+		light,
+		TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{Range = originalRange}
+	):Play()
+end
+
+task.spawn(function() 
+task.wait(0.1)
+
+CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/screaming.mp3?raw=true",
+    4,
+    "screaming",
+    "screamingSound",
+    model.FrostyNew,
+    true
+)
+
+ApplyHealthBlue()
+StartBlackout(model.FrostyNew)
+CameraShaker = StartCameraShake(model.FrostyNew)
+StartColorEffect()
+StartInfiniteFlicker()
+StartWalkSpeedLoop()
+StartPointLightPulse()
+StartLanternCheck()
+StartDoorCheck()
+end) 
+end) 
+end) 
+
+-- workspace.GameplayFolder.Characters.Guesttheguest234.Lantern.Lights.Light.Particle.ParticleEmitter
+-- workspace.GameplayFolder.Characters.Guesttheguest234.Lantern.Lights.Light.Attachment.PointLightNoShadow
+-- workspace.GameplayFolder.Characters.Guesttheguest234.Lantern.Lights.Light.Attachment.PointLight, 
