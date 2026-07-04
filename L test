@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLA SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
+-- BLAAa SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
 -- =====================================================================
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -799,14 +799,16 @@ local function traverseNodes(nodesFolder)
     
     log("PATH SIZE:", #currentPath)
 
+    -- Khởi tạo chỉ số rebound
     local totalRebounds = EntityConfig.Rebounding and math.random(EntityConfig.MinRebounds or 1, EntityConfig.MaxRebounds or 1) or 0
-    if EntityConfig.Rebounding then print("Entity thực hiện: " .. totalRebounds .. " vòng rebound.") end
+    if EntityConfig.Rebounding then print("Entity thực hiện tối đa: " .. totalRebounds .. " lần rebound.") end
 
     EntityConfig.OnMoveStart()
     
     local direction = 1
     local reboundsDone = 0
 
+    -- Spawn và Snap an toàn
     if not entityModel:GetAttribute("Spawned") then
         local startCFrame = currentPath[currentIndex].CFrame + EntityConfig.YOffset
         entityModel:PivotTo(startCFrame)
@@ -826,19 +828,24 @@ local function traverseNodes(nodesFolder)
         
         local nextIndex = currentIndex + direction
 
-        -- Logic chạm biên (Rebound)
+        -- 1. LOGIC CHẠM BIÊN (REBOUND)
         if (nextIndex < 1 or nextIndex > #currentPath) then
-            if not EntityConfig.Rebounding then break end
+            -- Nếu không bật rebound, chạm biên là kết thúc di chuyển
+            if not EntityConfig.Rebounding then 
+                log("Chạm biên, không rebound -> Kết thúc.")
+                break 
+            end
             
-            -- Nếu hết lượt rebound thì thoát vòng lặp để despawn
+            -- Nếu đã đạt đủ số lần rebound -> Kết thúc
             if reboundsDone >= totalRebounds then 
-                log("Đã hết lượt rebound, thực hiện despawn.")
+                log("Đã đạt giới hạn Rebound -> Kết thúc.")
                 break 
             end
 
             if canRebound and not reboundLock then
                 reboundLock = true
                 reboundsDone += 1
+                log(">>> Rebound lần thứ:", reboundsDone, "/", totalRebounds)
                 
                 isReboundingPaused = true
                 task.spawn(function()
@@ -859,7 +866,7 @@ local function traverseNodes(nodesFolder)
         if targetNode then
             local targetPos = targetNode.Position + EntityConfig.YOffset
             
-            -- Di chuyển tới node
+            -- Di chuyển tới node hiện tại
             while (rootPart.Position - targetPos).Magnitude > EntityConfig.Tolerance do
                 if entityFinished then return end
                 if isReboundingPaused then task.wait() continue end
@@ -872,22 +879,21 @@ local function traverseNodes(nodesFolder)
                 entityModel:PivotTo(entityModel:GetPivot() + (moveDir * moveStep))
             end
             
-            -- Logic Đếm phòng (RoomLimits)
+            -- 2. LOGIC ĐẾM PHÒNG VÀ ĐIỀU KIỆN DỪNG (LIMIT)
             local room = targetNode:FindFirstAncestorWhichIsA("Model")
             if room and room ~= lastRoom then
                 if lastRoom ~= nil then
                     roomsTraversed += 1
                     print("Entity đã đi qua phòng thứ: " .. roomsTraversed)
                     
+                    -- Kiểm tra nếu đạt Limit phòng
                     if EntityConfig.RoomLimits and roomsTraversed >= EntityConfig.RoomLimitValue then
-                        -- Kiểm tra điều kiện: chỉ despawn nếu đã hết lượt rebound hoặc không rebound
-                        if not EntityConfig.Rebounding or (reboundsDone >= totalRebounds) then
-                            print("Đạt giới hạn phòng và hoàn tất rebound, thực thể dừng hoạt động.")
-                            EntityConfig.OnDespawning()
-                            despawnEntity()
-                            return
+                        -- CHỈ DỪNG NẾU ĐÃ HẾT LƯỢT REBOUND
+                        if reboundsDone >= totalRebounds then
+                            print("Đạt giới hạn phòng VÀ hết lượt rebound -> Despawn.")
+                            break -- Thoát vòng lặp while để xuống phần despawn bên dưới
                         else
-                            print("Đạt giới hạn phòng nhưng còn lượt rebound, tiếp tục di chuyển...")
+                            print("Đạt giới hạn phòng nhưng còn lượt rebound -> Tiếp tục hành trình.")
                         end
                     end
                 end
@@ -899,7 +905,7 @@ local function traverseNodes(nodesFolder)
         end
     end
 
-    -- Đảm bảo gọi OnDespawning trước khi xóa
+    -- ĐIỂM DỪNG CHUNG
     EntityConfig.OnDespawning()
     despawnEntity()
 end
