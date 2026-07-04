@@ -18,6 +18,8 @@ spawnEntity({
     MaxRebounds = 14,
     Reversed = false,
     DelayEachRebound = 0,
+    WallPenetrating = false,
+    IgnoreHiding = true,
     
     YOffset = Vector3.new(0, 2, 0),
     DespawnYOffset = Vector3.new(0, 30, 0),
@@ -26,7 +28,8 @@ spawnEntity({
     MaxDarkness = 0.2,
     ShakeIntensity = 2.5,
     ShakeSpeedMultiplier = 1.5,
-    LightFlickerTime = 10,       
+    LightFlickerTime = 10,   
+    LightFlickersUntilDespawn = false,
     
     EnableFlicker = true,
     EnableShake = true,
