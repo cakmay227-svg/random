@@ -488,10 +488,10 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
         local direction = humanoidRootPart.Position - rootPart.Position
         local distance = direction.Magnitude
         
-                if distance <= EntityConfig.HitboxRadius then
-            -- 1. Kiểm tra tủ an toàn (chỉ chạy nếu IgnoreHiding là false)
+        if distance <= EntityConfig.HitboxRadius then
+            -- 1. KIỂM TRA TỦ (Logic mới: IgnoreHiding = true thì Tôn trọng tủ/An toàn)
             local isSafeInLocker = false
-            if not EntityConfig.IgnoreHiding then
+            if EntityConfig.IgnoreHiding == true then -- Chỉ kiểm tra tủ nếu IgnoreHiding là true (An toàn)
                 local roomsFolder = Gameplay:FindFirstChild("Rooms")
                 if roomsFolder then
                     for _, descendant in ipairs(roomsFolder:GetDescendants()) do
@@ -506,40 +506,53 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
                 end
             end
             
-            -- Nếu đang trốn tủ và không cho phép IgnoreHiding thì bỏ qua sát thương
+            -- Nếu đang trốn tủ và được an toàn, thoát hàm
             if isSafeInLocker then return end
             
-            -- 2. Kiểm tra vật cản (Raycast) hoặc Xuyên tường... (phần code cũ giữ nguyên)            
-            
-            -- 2. Kiểm tra vật cản (Raycast) hoặc Xuyên tường
+            -- 2. Kiểm tra xuyên tường (WallPenetrating) hoặc Raycast
             local canHit = false
-            
-            if EntityConfig.WallPenetrating == true then
-                -- Nếu WallPenetrating bật, bỏ qua kiểm tra Raycast
+            if EntityConfig.WallPenetrating then
                 canHit = true
             else
-                -- Nếu WallPenetrating tắt, thực hiện kiểm tra Raycast như cũ
                 local params = RaycastParams.new()
                 params.FilterType = Enum.RaycastFilterType.Exclude
                 params.FilterDescendantsInstances = {entityModel, character}
                 params.IgnoreWater = true
                 
                 local raycastResult = Workspace:Raycast(rootPart.Position, direction, params)
-                if not raycastResult then
-                    canHit = true
-                end
+                if not raycastResult then canHit = true end
             end
             
-            -- 3. Thực thi Jumpscare/Damage
+            -- 3. Thực thi Sát thương
             if canHit then
                 if EntityConfig.ConstantBloodSucking then
                     if not isSuckingBlood then
                         isSuckingBlood = true
                         task.spawn(function()
-                            -- Tiếp tục hút máu khi còn trong phạm vi hitbox
-                            while (Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") and 
-                                  (Player.Character.HumanoidRootPart.Position - rootPart.Position).Magnitude <= EntityConfig.HitboxRadius) do
+                            while true do
+                                local char = Player.Character
+                                local hrp = char and char:FindFirstChild("HumanoidRootPart")
                                 
+                                -- Điều kiện dừng hút máu
+                                if not hrp or (hrp.Position - rootPart.Position).Magnitude > EntityConfig.HitboxRadius then
+                                    break
+                                end
+                                
+                                -- Kiểm tra lại tủ trong lúc hút máu (Tôn trọng tủ nếu IgnoreHiding là true)
+                                local stillSafe = false
+                                if EntityConfig.IgnoreHiding == true then
+                                    local roomsFolder = Gameplay:FindFirstChild("Rooms")
+                                    if roomsFolder then
+                                        for _, d in ipairs(roomsFolder:GetDescendants()) do
+                                            if d:IsA("Model") and d.Name == "Locker" then
+                                                local val = d:FindFirstChild("PlayerIn", true)
+                                                if val and val.Value == true then stillSafe = true break end
+                                            end
+                                        end
+                                    end
+                                end
+                                if stillSafe then break end
+
                                 executeJumpscare()
                                 task.wait(EntityConfig.DelayEachDamage)
                             end
@@ -547,7 +560,6 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
                         end)
                     end
                 else
-                    -- Logic cũ: Chỉ tóm 1 lần
                     executeJumpscare()
                 end
             end
