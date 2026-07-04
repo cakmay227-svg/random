@@ -1,5 +1,5 @@
 -- =====================================================================
--- ENTITY SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
+-- BLA SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
 -- =====================================================================
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -792,7 +792,6 @@ local roomRemovedConnection
 local function traverseNodes(nodesFolder)
     currentPath = (typeof(nodesFolder) == "table") and nodesFolder or extractPathNodes(nodesFolder)
     
-    -- Khởi tạo các biến kiểm soát
     local roomsTraversed = 0 
     local lastRoom = nil
 
@@ -830,7 +829,12 @@ local function traverseNodes(nodesFolder)
         -- Logic chạm biên (Rebound)
         if (nextIndex < 1 or nextIndex > #currentPath) then
             if not EntityConfig.Rebounding then break end
-            if reboundsDone >= totalRebounds then break end
+            
+            -- Nếu hết lượt rebound thì thoát vòng lặp để despawn
+            if reboundsDone >= totalRebounds then 
+                log("Đã hết lượt rebound, thực hiện despawn.")
+                break 
+            end
 
             if canRebound and not reboundLock then
                 reboundLock = true
@@ -876,10 +880,15 @@ local function traverseNodes(nodesFolder)
                     print("Entity đã đi qua phòng thứ: " .. roomsTraversed)
                     
                     if EntityConfig.RoomLimits and roomsTraversed >= EntityConfig.RoomLimitValue then
-                        print("Đã đạt giới hạn phòng, thực thể dừng hoạt động.")
-                        EntityConfig.OnDespawning()
-                        despawnEntity()
-                        return
+                        -- Kiểm tra điều kiện: chỉ despawn nếu đã hết lượt rebound hoặc không rebound
+                        if not EntityConfig.Rebounding or (reboundsDone >= totalRebounds) then
+                            print("Đạt giới hạn phòng và hoàn tất rebound, thực thể dừng hoạt động.")
+                            EntityConfig.OnDespawning()
+                            despawnEntity()
+                            return
+                        else
+                            print("Đạt giới hạn phòng nhưng còn lượt rebound, tiếp tục di chuyển...")
+                        end
                     end
                 end
                 
@@ -890,6 +899,7 @@ local function traverseNodes(nodesFolder)
         end
     end
 
+    -- Đảm bảo gọi OnDespawning trước khi xóa
     EntityConfig.OnDespawning()
     despawnEntity()
 end
