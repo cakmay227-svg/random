@@ -14,6 +14,7 @@ local SoundService = game:GetService("SoundService")
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
+local FlickerEnabled = false
 
 local Remotes = ReplicatedStorage:WaitForChild("Events")
 local URSpecialEffects = Remotes:WaitForChild("URSpecialEffects")
@@ -28,8 +29,6 @@ local EntityConfig = {
     InstantKill = true, 
     ConstantBloodSucking = false, -- Thêm vào bảng EntityConfig
     DelayEachDamage = 0.5,          -- Thêm vào bảng EntityConfig
-    ContinueForwardBeforeDespawn = true,
-    ContinueDistance = 70,
     
     DelayWhenSpawned = false,      -- Bật/tắt việc chờ đợi khi spawn
     Delay = 1,                     -- Số giây chờ trước khi bắt đầu di chuyển
@@ -38,6 +37,8 @@ local EntityConfig = {
     MaxRebounds = 1,
     Reversed = false, -- Thêm dòng này vào bảng EntityConfig
     DelayEachRebound = 1,
+    WallPenetrating = false, -- Thêm dòng này vào bảng EntityConfig
+    IgnoreHiding = false, -- Thêm dòng này: false = không tấn công khi trốn tủ, true = tấn công xuyên tủ
     
     YOffset = Vector3.new(0, 4, 0),
     DespawnYOffset = Vector3.new(0, 30, 0),
@@ -473,9 +474,8 @@ proximityConnection = RunService.RenderStepped:Connect(function()
 end)
 
 -- =====================================================================
--- HITBOX SYSTEM (VÔ HIỆU HÓA KHI TRỐN TỦ - PLAYERIN == TRUE)
+-- HITBOX SYSTEM (FIXED: HỖ TRỢ XUYÊN TƯỜNG)
 -- =====================================================================
--- Biến kiểm soát trạng thái hút máu
 local isSuckingBlood = false 
 
 hitboxConnection = RunService.Heartbeat:Connect(function()
@@ -489,41 +489,70 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
         local distance = direction.Magnitude
         
         if distance <= EntityConfig.HitboxRadius then
-            -- Kiểm tra tủ an toàn
+            -- 1. KIỂM TRA TỦ (Logic mới: IgnoreHiding = true thì Tôn trọng tủ/An toàn)
             local isSafeInLocker = false
-            local roomsFolder = Gameplay:FindFirstChild("Rooms")
-            if roomsFolder then
-                for _, descendant in ipairs(roomsFolder:GetDescendants()) do
-                    if descendant:IsA("Model") and descendant.Name == "Locker" then
-                        local playerInValue = descendant:FindFirstChild("PlayerIn", true)
-                        if playerInValue and playerInValue.Value == true then
-                            isSafeInLocker = true
-                            break
+            if EntityConfig.IgnoreHiding == true then -- Chỉ kiểm tra tủ nếu IgnoreHiding là true (An toàn)
+                local roomsFolder = Gameplay:FindFirstChild("Rooms")
+                if roomsFolder then
+                    for _, descendant in ipairs(roomsFolder:GetDescendants()) do
+                        if descendant:IsA("Model") and descendant.Name == "Locker" then
+                            local playerInValue = descendant:FindFirstChild("PlayerIn", true)
+                            if playerInValue and playerInValue.Value == true then
+                                isSafeInLocker = true
+                                break
+                            end
                         end
                     end
                 end
             end
             
+            -- Nếu đang trốn tủ và được an toàn, thoát hàm
             if isSafeInLocker then return end
             
-            -- Raycast check
-            local params = RaycastParams.new()
-            params.FilterType = Enum.RaycastFilterType.Exclude
-            params.FilterDescendantsInstances = {entityModel, character}
-            params.IgnoreWater = true
+            -- 2. Kiểm tra xuyên tường (WallPenetrating) hoặc Raycast
+            local canHit = false
+            if EntityConfig.WallPenetrating then
+                canHit = true
+            else
+                local params = RaycastParams.new()
+                params.FilterType = Enum.RaycastFilterType.Exclude
+                params.FilterDescendantsInstances = {entityModel, character}
+                params.IgnoreWater = true
+                
+                local raycastResult = Workspace:Raycast(rootPart.Position, direction, params)
+                if not raycastResult then canHit = true end
+            end
             
-            local raycastResult = Workspace:Raycast(rootPart.Position, direction, params)
-            
-            if not raycastResult then
-                -- LOGIC MỚI: Xử lý Hút máu liên tục hoặc Tóm đơn lẻ
+            -- 3. Thực thi Sát thương
+            if canHit then
                 if EntityConfig.ConstantBloodSucking then
                     if not isSuckingBlood then
                         isSuckingBlood = true
                         task.spawn(function()
-                            -- Tiếp tục hút máu khi còn trong phạm vi hitbox
-                            while (Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") and 
-                                  (Player.Character.HumanoidRootPart.Position - rootPart.Position).Magnitude <= EntityConfig.HitboxRadius) do
+                            while true do
+                                local char = Player.Character
+                                local hrp = char and char:FindFirstChild("HumanoidRootPart")
                                 
+                                -- Điều kiện dừng hút máu
+                                if not hrp or (hrp.Position - rootPart.Position).Magnitude > EntityConfig.HitboxRadius then
+                                    break
+                                end
+                                
+                                -- Kiểm tra lại tủ trong lúc hút máu (Tôn trọng tủ nếu IgnoreHiding là true)
+                                local stillSafe = false
+                                if EntityConfig.IgnoreHiding == true then
+                                    local roomsFolder = Gameplay:FindFirstChild("Rooms")
+                                    if roomsFolder then
+                                        for _, d in ipairs(roomsFolder:GetDescendants()) do
+                                            if d:IsA("Model") and d.Name == "Locker" then
+                                                local val = d:FindFirstChild("PlayerIn", true)
+                                                if val and val.Value == true then stillSafe = true break end
+                                            end
+                                        end
+                                    end
+                                end
+                                if stillSafe then break end
+
                                 executeJumpscare()
                                 task.wait(EntityConfig.DelayEachDamage)
                             end
@@ -531,7 +560,6 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
                         end)
                     end
                 else
-                    -- Logic cũ: Chỉ tóm 1 lần
                     executeJumpscare()
                 end
             end
@@ -646,28 +674,33 @@ end
         end
     end
 
-    if EntityConfig.ContinueForwardBeforeDespawn then
-        -- Đã chạy thêm 70 studs rồi nên destroy luôn
-        if entityModel then
-            entityModel:Destroy()
-        end
-    else
-        -- Giữ nguyên kiểu despawn cũ
-        local tween = TweenService:Create(
-            rootPart,
-            TweenInfo.new(2, Enum.EasingStyle.Linear),
+    local tween = TweenService:Create(
+    rootPart,
+    TweenInfo.new(2, Enum.EasingStyle.Linear),
+    {
+        CFrame = rootPart.CFrame - EntityConfig.DespawnYOffset
+    }
+)
+
+-- Fade out tất cả Sound trong entity khi bắt đầu despawn
+for _, obj in ipairs(entityModel:GetDescendants()) do
+    if obj:IsA("Sound") then
+        TweenService:Create(
+            obj,
+            TweenInfo.new(5, Enum.EasingStyle.Linear),
             {
-                CFrame = rootPart.CFrame - EntityConfig.DespawnYOffset
+                Volume = 0
             }
-        )
-
-        tween:Play()
-        tween.Completed:Wait()
-
-        if entityModel then
-            entityModel:Destroy()
-        end
+        ):Play()
     end
+end
+
+tween:Play()
+tween.Completed:Wait()
+
+if entityModel then
+    entityModel:Destroy()
+end
     
     EntityConfig.OnDespawned()
 end
@@ -753,32 +786,6 @@ local currentIndex = 1
 local currentDirection = 1
 local roomAddedConnection
 local roomRemovedConnection
-
-local function continueForwardAndDespawn()
-    if entityFinished then
-        return
-    end
-
-    EntityConfig.OnDespawning()
-
-    local startPos = rootPart.Position
-    local moveDir = rootPart.CFrame.LookVector
-
-    while (rootPart.Position - startPos).Magnitude < EntityConfig.ContinueDistance do
-        if entityFinished then
-            return
-        end
-
-        local dt = task.wait()
-
-        entityModel:PivotTo(
-            entityModel:GetPivot() +
-            moveDir * EntityConfig.MoveSpeed * dt
-        )
-    end
-
-    despawnEntity()
-end
 
 local function traverseNodes(nodesFolder)
     currentPath = (typeof(nodesFolder) == "table") and nodesFolder or extractPathNodes(nodesFolder)
@@ -897,12 +904,8 @@ end
 
     log("WHILE ENDED")
 
-if EntityConfig.ContinueForwardBeforeDespawn then
-    continueForwardAndDespawn()
-else
-    EntityConfig.OnDespawning()
-    despawnEntity()
-end
+EntityConfig.OnDespawning()
+despawnEntity()
 end
 
 -- =====================================================================
