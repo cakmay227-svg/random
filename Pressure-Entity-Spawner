@@ -37,7 +37,8 @@ local EntityConfig = {
     MaxRebounds = 1,
     Reversed = false, -- Thêm dòng này vào bảng EntityConfig
     DelayEachRebound = 1,
-     WallPenetrating = false, -- Thêm dòng này vào bảng EntityConfig
+    WallPenetrating = false, -- Thêm dòng này vào bảng EntityConfig
+    IgnoreHiding = false, -- Thêm dòng này: false = không tấn công khi trốn tủ, true = tấn công xuyên tủ
     
     YOffset = Vector3.new(0, 4, 0),
     DespawnYOffset = Vector3.new(0, 30, 0),
@@ -487,23 +488,28 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
         local direction = humanoidRootPart.Position - rootPart.Position
         local distance = direction.Magnitude
         
-        if distance <= EntityConfig.HitboxRadius then
-            -- 1. Kiểm tra tủ an toàn
+                if distance <= EntityConfig.HitboxRadius then
+            -- 1. Kiểm tra tủ an toàn (chỉ chạy nếu IgnoreHiding là false)
             local isSafeInLocker = false
-            local roomsFolder = Gameplay:FindFirstChild("Rooms")
-            if roomsFolder then
-                for _, descendant in ipairs(roomsFolder:GetDescendants()) do
-                    if descendant:IsA("Model") and descendant.Name == "Locker" then
-                        local playerInValue = descendant:FindFirstChild("PlayerIn", true)
-                        if playerInValue and playerInValue.Value == true then
-                            isSafeInLocker = true
-                            break
+            if not EntityConfig.IgnoreHiding then
+                local roomsFolder = Gameplay:FindFirstChild("Rooms")
+                if roomsFolder then
+                    for _, descendant in ipairs(roomsFolder:GetDescendants()) do
+                        if descendant:IsA("Model") and descendant.Name == "Locker" then
+                            local playerInValue = descendant:FindFirstChild("PlayerIn", true)
+                            if playerInValue and playerInValue.Value == true then
+                                isSafeInLocker = true
+                                break
+                            end
                         end
                     end
                 end
             end
             
+            -- Nếu đang trốn tủ và không cho phép IgnoreHiding thì bỏ qua sát thương
             if isSafeInLocker then return end
+            
+            -- 2. Kiểm tra vật cản (Raycast) hoặc Xuyên tường... (phần code cũ giữ nguyên)            
             
             -- 2. Kiểm tra vật cản (Raycast) hoặc Xuyên tường
             local canHit = false
