@@ -10,6 +10,7 @@ spawnEntity({
     InstantKill = true,
     ConstantBloodSucking = false,
     DelayEachDamage = 0.1,
+    WallPenetrating = false,
     
     DelayWhenSpawned = true,     
     Delay = 15, 
