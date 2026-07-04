@@ -14,6 +14,7 @@ local SoundService = game:GetService("SoundService")
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
+local FlickerEnabled = false
 
 local Remotes = ReplicatedStorage:WaitForChild("Events")
 local URSpecialEffects = Remotes:WaitForChild("URSpecialEffects")
@@ -36,6 +37,7 @@ local EntityConfig = {
     MaxRebounds = 1,
     Reversed = false, -- Thêm dòng này vào bảng EntityConfig
     DelayEachRebound = 1,
+     WallPenetrating = false, -- Thêm dòng này vào bảng EntityConfig
     
     YOffset = Vector3.new(0, 4, 0),
     DespawnYOffset = Vector3.new(0, 30, 0),
@@ -471,9 +473,8 @@ proximityConnection = RunService.RenderStepped:Connect(function()
 end)
 
 -- =====================================================================
--- HITBOX SYSTEM (VÔ HIỆU HÓA KHI TRỐN TỦ - PLAYERIN == TRUE)
+-- HITBOX SYSTEM (FIXED: HỖ TRỢ XUYÊN TƯỜNG)
 -- =====================================================================
--- Biến kiểm soát trạng thái hút máu
 local isSuckingBlood = false 
 
 hitboxConnection = RunService.Heartbeat:Connect(function()
@@ -487,7 +488,7 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
         local distance = direction.Magnitude
         
         if distance <= EntityConfig.HitboxRadius then
-            -- Kiểm tra tủ an toàn
+            -- 1. Kiểm tra tủ an toàn
             local isSafeInLocker = false
             local roomsFolder = Gameplay:FindFirstChild("Rooms")
             if roomsFolder then
@@ -504,16 +505,27 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
             
             if isSafeInLocker then return end
             
-            -- Raycast check
-            local params = RaycastParams.new()
-            params.FilterType = Enum.RaycastFilterType.Exclude
-            params.FilterDescendantsInstances = {entityModel, character}
-            params.IgnoreWater = true
+            -- 2. Kiểm tra vật cản (Raycast) hoặc Xuyên tường
+            local canHit = false
             
-            local raycastResult = Workspace:Raycast(rootPart.Position, direction, params)
+            if EntityConfig.WallPenetrating == true then
+                -- Nếu WallPenetrating bật, bỏ qua kiểm tra Raycast
+                canHit = true
+            else
+                -- Nếu WallPenetrating tắt, thực hiện kiểm tra Raycast như cũ
+                local params = RaycastParams.new()
+                params.FilterType = Enum.RaycastFilterType.Exclude
+                params.FilterDescendantsInstances = {entityModel, character}
+                params.IgnoreWater = true
+                
+                local raycastResult = Workspace:Raycast(rootPart.Position, direction, params)
+                if not raycastResult then
+                    canHit = true
+                end
+            end
             
-            if not raycastResult then
-                -- LOGIC MỚI: Xử lý Hút máu liên tục hoặc Tóm đơn lẻ
+            -- 3. Thực thi Jumpscare/Damage
+            if canHit then
                 if EntityConfig.ConstantBloodSucking then
                     if not isSuckingBlood then
                         isSuckingBlood = true
