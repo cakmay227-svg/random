@@ -48,6 +48,7 @@ local EntityConfig = {
     ShakeIntensity = 2.5,
     ShakeSpeedMultiplier = 1.5,
     LightFlickerTime = 0,          -- Thời gian chớp đèn liên tục khi mới spawn
+    LightFlickersUntilDespawn = false,
     
     -- Cấu hình bật/tắt hiệu ứng True/False
     EnableFlicker = true,
@@ -611,13 +612,20 @@ local function triggerDoubleFlicker()
 
     if #validLights == 0 then return end  
 
-    -- TÍNH NĂNG MỚI: Chớp liên tục trong thời gian LightFlickerTime
+    -- TÍNH NĂNG MỚI: Chớp liên tục
     task.spawn(function()
         local startTime = os.clock()
-        -- Chớp liên tục cho đến khi đạt thời gian LightFlickerTime
-        while (os.clock() - startTime) < EntityConfig.LightFlickerTime do
+        
+        -- Nếu là true: chớp cho đến khi entityFinished (despawn)
+        -- Nếu là false: chớp theo thời gian LightFlickerTime
+        while not entityFinished do
+            if not EntityConfig.LightFlickersUntilDespawn then
+                if (os.clock() - startTime) >= EntityConfig.LightFlickerTime then
+                    break
+                end
+            end
+            
             fireFlickerEvent(connections, validLights)
-            -- Khoảng nghỉ giữa các lần phát lệnh chớp (0.2s tạo cảm giác chớp liên tục mượt mà)
             task.wait(0.2) 
         end
     end)
