@@ -1,5 +1,5 @@
 -- =====================================================================
--- ENTITYYY SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
+-- ENTITY SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
 -- =====================================================================
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -41,6 +41,7 @@ local EntityConfig = {
     IgnoreHiding = false, -- Thêm dòng này: false = không tấn công khi trốn tủ, true = tấn công xuyên tủ
     RoomLimits = false,
     RoomLimitValue = 5,
+    EntityLifeTime = "Forever", -- hoặc 15, 7.5,...
     
     YOffset = Vector3.new(0, 4, 0),
     DespawnYOffset = Vector3.new(0, 30, 0),
@@ -269,6 +270,8 @@ end
 local entityModel = nil
 local rootPart = nil
 local entityFinished = false
+local LifeTimeTask = nil
+local LifeTimeExpired = false
 local proximityConnection = nil
 local flickerConnection = nil
 local hitboxConnection = nil
@@ -646,6 +649,8 @@ end
 despawnEntity = function()
     if entityFinished then return end
     entityFinished = true
+    
+    LifeTimeExpired = true
     
     -- 1. Reset tất cả các biến trạng thái về mặc định
     -- Điều này cực kỳ quan trọng nếu thực thể được spawn lại
@@ -1161,6 +1166,45 @@ end
 
 if SpawnRoom then
 	SpawnRoomName = SpawnRoom.Name
+end
+
+if type(EntityConfig.EntityLifeTime) == "number" then
+	LifeTimeTask = task.delay(EntityConfig.EntityLifeTime, function()
+		if entityFinished or LifeTimeExpired then
+			return
+		end
+
+		LifeTimeExpired = true
+
+		if movementConnection then
+			movementConnection:Disconnect()
+			movementConnection = nil
+		end
+
+		if hitboxConnection then
+			hitboxConnection:Disconnect()
+			hitboxConnection = nil
+		end
+
+		if roomAddedConnection then
+			roomAddedConnection:Disconnect()
+			roomAddedConnection = nil
+		end
+
+		if roomRemovedConnection then
+			roomRemovedConnection:Disconnect()
+			roomRemovedConnection = nil
+		end
+
+		if currentTween then
+			currentTween:Cancel()
+			currentTween = nil
+		end
+
+		entityFinished = true
+
+		despawnEntity()
+	end)
 end
 
     traverseNodes(buildFullPath())
