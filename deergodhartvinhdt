@@ -1,0 +1,360 @@
+local spawnEntity = loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/Pressure-Entity-Spawner"))()
+
+local TweenService = game:GetService("TweenService")
+local Camera = workspace.CurrentCamera
+
+local originalFOV = Camera.FieldOfView
+
+local Enabled = false
+local LoopThread
+
+function GitAud(soundgit, filename)
+    local url = soundgit
+    local FileName = filename
+
+    writefile(FileName .. ".mp3", game:HttpGet(url))
+    return (getcustomasset or getsynasset)(FileName .. ".mp3")
+end
+
+function CustomGitSound(soundlink, volume, filename, soundName, parent, looped)
+    local sound = Instance.new("Sound")
+
+    sound.SoundId = GitAud(soundlink, filename)
+    sound.Parent = parent or workspace
+    sound.Volume = volume or 1
+    sound.RollOffMaxDistance = 400
+    sound.RollOffMinDistance = 5
+    sound.PlaybackSpeed = 1
+    sound.Name = soundName or "bgtheme"
+    sound.Looped = looped or false
+
+    sound:Play()
+
+    return sound
+end
+
+local function StartFOVEffect()
+	if Enabled then return end
+	Enabled = true
+
+	LoopThread = task.spawn(function()
+		while Enabled do
+			Camera.FieldOfView = 45
+
+			local tween = TweenService:Create(
+				Camera,
+				TweenInfo.new(
+					1,
+					Enum.EasingStyle.Quint,
+					Enum.EasingDirection.Out
+				),
+				{
+					FieldOfView = originalFOV
+				}
+			)
+
+			tween:Play()
+			task.wait(1)
+		end
+	end)
+end
+
+local function StopFOVEffect()
+	Enabled = false
+	Camera.FieldOfView = originalFOV
+end
+
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+
+local blur = Lighting:FindFirstChild("LoopBlur") or Instance.new("BlurEffect")
+blur.Name = "LoopBlur"
+blur.Size = 0
+blur.Parent = Lighting
+
+local Blur = false
+local Thread
+
+local function StartBlurLoop()
+	if Blur then return end
+	Blur = true
+
+	Thread = task.spawn(function()
+		while Blur do
+			TweenService:Create(blur, TweenInfo.new(2, Enum.EasingStyle.Linear), {
+				Size = 24 -- độ mờ
+			}):Play()
+
+			task.wait(2)
+
+			TweenService:Create(blur, TweenInfo.new(2, Enum.EasingStyle.Linear), {
+				Size = 0
+			}):Play()
+
+			task.wait(2)
+		end
+	end)
+end
+
+local function StopBlurLoop()
+	Blur = false
+
+	TweenService:Create(blur, TweenInfo.new(2, Enum.EasingStyle.Linear), {
+		Size = 0
+	}):Play()
+end
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+
+local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+local Color = Lighting:FindFirstChild("GlitchPurple") or Instance.new("ColorCorrectionEffect")
+Color.Name = "GlitchPurple"
+Color.Enabled = false
+Color.TintColor = Color3.fromRGB(180, 60, 255)
+Color.Brightness = 0
+Color.Contrast = 0
+Color.Saturation = 0
+Color.Parent = Lighting
+
+function ShowGlitchText(Text)
+	local Gui = Instance.new("ScreenGui")
+	Gui.IgnoreGuiInset = true
+	Gui.ResetOnSpawn = false
+	Gui.DisplayOrder = 999999
+	Gui.Parent = PlayerGui
+
+	local Label = Instance.new("TextLabel")
+	Label.AnchorPoint = Vector2.new(0.5, 0.5)
+	Label.Position = UDim2.fromScale(0.5, 0.5)
+	Label.Size = UDim2.fromOffset(1200, 200)
+	Label.BackgroundTransparency = 1
+	Label.Text = Text
+	Label.Font = Enum.Font.Code -- font mỏng
+	Label.TextScaled = true
+	Label.TextColor3 = Color3.fromRGB(170, 70, 255)
+	Label.TextStrokeTransparency = 1
+	Label.TextTransparency = 0
+	Label.Rotation = 0
+	Label.Parent = Gui
+
+	local oldBrightness = Color.Brightness
+	local oldContrast = Color.Contrast
+	local oldSaturation = Color.Saturation
+	local oldTint = Color.TintColor
+
+	Color.Enabled = true
+	Color.TintColor = Color3.fromRGB(180, 60, 255)
+	Color.Brightness = 0.12
+	Color.Contrast = 0.3
+	Color.Saturation = -0.15
+
+	local Start = tick()
+
+	local Shake
+	Shake = RunService.RenderStepped:Connect(function()
+		local t = tick() - Start
+
+		if t >= 0.5 then
+			Shake:Disconnect()
+
+			TweenService:Create(Color, TweenInfo.new(0.2), {
+				Brightness = oldBrightness,
+				Contrast = oldContrast,
+				Saturation = oldSaturation,
+				TintColor = oldTint
+			}):Play()
+
+			task.delay(0.2, function()
+				Color.Enabled = false
+			end)
+
+			Gui:Destroy()
+			return
+		end
+
+		Label.Position = UDim2.fromScale(
+			0.5 + math.random(-20,20)/1000,
+			0.5 + math.random(-20,20)/1000
+		)
+
+		Label.Rotation = math.random(-35,35)
+
+		Label.TextTransparency = math.random(0,25)/100
+	end)
+end
+
+local GlitchTexts = {
+	"RUN RUN RUN",
+	"RUN AWAY",
+	"WHERE ARE YOU?",
+	"LOOK BEHIND",
+	"YOU CAN'T ESCAPE"
+}
+
+local GlitchLoop = false
+local GlitchThread
+
+function StartRandomGlitchTexts()
+	if GlitchLoop then return end
+	GlitchLoop = true
+
+	GlitchThread = task.spawn(function()
+		while GlitchLoop do
+			task.wait(math.random(4, 6))
+
+			if not GlitchLoop then
+				break
+			end
+
+			ShowGlitchText(GlitchTexts[math.random(#GlitchTexts)])
+		end
+	end)
+end
+
+function StopRandomGlitchTexts()
+	GlitchLoop = false
+end
+
+spawnEntity({
+    AssetId = "rbxassetid://104515394310264",
+    EntityName = "Deer God",
+    MoveSpeed = 13,
+    HitboxRadius = 30,
+    ShakeRadius = 300,
+    DamageAmount = 0,    
+    InstantKill = false,
+    ConstantBloodSucking = true,
+    DelayEachDamage = 0.2,
+    
+    DelayWhenSpawned = true,     
+    Delay = 10, 
+    Rebounding = false,  
+    Reversed = false, 
+    MinRebounds = 1,   
+    MaxRebounds = 1,
+    DelayEachRebound = 0,
+    WallPenetrating = true,
+    IgnoreHiding = false,
+    RoomLimits = false,
+    RoomLimitValue = 12,
+    EntityLifeTime = 120,
+    
+    YOffset = Vector3.new(0, 2, 0),
+    DespawnYOffset = Vector3.new(0, 30, 0),
+    Tolerance = 0.1,
+    FlickerSpeed = 75,
+    MaxDarkness = 0.2,
+    ShakeIntensity = 1,
+    ShakeSpeedMultiplier = 1.5,
+    LightFlickerTime = 10,       
+    LightFlickersUntilDespawn = true,
+    
+    EnableFlicker = true,
+    EnableShake = true,
+    EnableBlackout = true,
+    EnableBreakLights = false,
+    
+    GithubSound = "",         
+    PlayGitSoundWhenSpawned = false, 
+    SoundVolume = 1,        
+    SoundPlaybackSpeed = 1,
+
+    LightBreakRange = 35,                          
+    LightDarkenPercent = 0.11,                
+    LightAutoScanInterval = 0.1,              
+    
+    LightSoundId = "rbxassetid://13303926122", 
+    LightSoundVolume = 2,                   
+    LightSoundDistance = 150,                 
+    
+    LightParticleTexture = "rbxassetid://257173628", 
+    LightParticleDuration = 0.3,
+    
+    DeathImage = "rbxassetid://87595436288298",
+    DeathName = "TRUE HARBINGER",
+    DeathNotes = "Run.. Run.. RUN!",
+    DeathImageColor = Color3.fromRGB(255, 255, 255), -- Mặc định là trắng (giữ nguyên màu ảnh)
+    
+    OnSpawn = function() 
+    local intro = workspace:FindFirstChild("AnticipationIntro")
+
+if intro then
+    intro.Volume = 0
+else
+    print("GEOTUTURUU")
+end
+
+task.spawn(function() 
+    CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/startingangle.mp3?raw=true",
+    2,
+    "starting",
+    "startingSound",
+    workspace,
+    false
+)
+end) 
+
+ShowGlitchText("???")
+
+CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/h%E1%BA%A3bing%E1%BB%9F_1.mp3?raw=true",
+    5,
+    "screaming",
+    "screamingSound",
+    workspace["Deer God"]["Z-1000"],
+    true
+)
+end,
+    OnMoveStart = function() 
+    task.spawn(function() 
+    StartFOVEffect()
+    end) 
+    
+    ShowGlitchText("I'M COMING")
+    
+    StartRandomGlitchTexts() -- Bắt đầu loop
+    
+    StartBlurLoop()
+    
+    CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/deathangel.mp3?raw=true",
+    2,
+    "moving",
+    "movingSound",
+    workspace,
+    true
+)
+end,
+    OnRoomEnter = function(roomName) end,
+    OnDamagePlayer = function() end,
+    OnKillPlayer = function() 
+    pcall(function() 
+    StopFOVEffect()
+    StopBlurLoop()
+    StopRandomGlitchTexts() -- Dừng loop
+    end) 
+end,
+    OnDespawning = function() end,
+    OnDespawned = function()
+    task.spawn(function() 
+    StopFOVEffect()
+    StopBlurLoop()
+    StopRandomGlitchTexts() -- Dừng loop
+    end) 
+    
+ShowGlitchText("...")
+
+task.spawn(function() 
+local bye = workspace:WaitForChild("movingSound") 
+bye:Destroy() 
+end) 
+
+local bye2 = workspace:WaitForChild("startingSound") 
+bye2:Destroy() 
+ end,
+})
