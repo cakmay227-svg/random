@@ -1,0 +1,138 @@
+-- =====================================================================
+-- CHẠY SCRIPT GITHUB NGAY LẬP TỨC KHI RUN SCRIPT
+-- =====================================================================
+task.spawn(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/vuivuiviu2/Chess-mode/refs/heads/main/Con%20cu"))()
+    end)
+end)
+
+-- =====================================================================
+-- HÀM TẢI ÂM THANH CHUẨN TỪ GITHUB (CHỐNG LỖI AUTHORIZED)
+-- =====================================================================
+local function GitAud(soundlink, filename)
+    local url = soundlink
+    local FileName = filename
+    if not isfile(FileName..".mp3") then
+        writefile(FileName..".mp3", game:HttpGet(url))
+    end
+    return (getcustomasset or getsynasset)(FileName..".mp3")
+end
+
+-- Tải trước các âm thanh cho Smiler
+local SoundFar1Id = GitAud("https://github.com/vuivuiviu2/Pressure-Hardcore-Mode/raw/refs/heads/main/far1.mp3", "Smiler_Far1")
+local SoundFar2Id = GitAud("https://github.com/vuivuiviu2/Pressure-Hardcore-Mode/raw/refs/heads/main/far2%20spawn.mp3", "Smiler_Far2")
+local SoundNearId = GitAud("https://github.com/vuivuiviu2/Pressure-Hardcore-Mode/raw/refs/heads/main/near.mp3", "Smiler_Near")
+
+local spawnEntity = loadstring(game:HttpGet("https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/Pressure-Entity-Spawner"))()
+
+spawnEntity({
+    AssetId = "rbxassetid://123731313891218",
+    EntityName = "Smiler",
+    MoveSpeed = 55,
+    HitboxRadius = 40,
+    ShakeRadius = 55,
+    DamageAmount = 45,    
+    InstantKill = false,
+    ConstantBloodSucking = true,
+    DelayEachDamage = 0.1,
+    
+    DelayWhenSpawned = true,     
+    Delay = 4.5, 
+    Rebounding = false,  
+    Reversed = true, 
+    MinRebounds = 1,   
+    MaxRebounds = 1,
+    DelayEachRebound = 0,
+    WallPenetrating = false,
+    IgnoreHiding = true,
+    RoomLimits = false,
+    RoomLimitValue = 12,
+    EntityLifeTime = "Forever",
+    
+    YOffset = Vector3.new(0, 2, 0),
+    DespawnYOffset = Vector3.new(0, 30, 0),
+    Tolerance = 0.1,
+    FlickerSpeed = 75,
+    MaxDarkness = 0.2,
+    ShakeIntensity = 2.5,
+    ShakeSpeedMultiplier = 1.5,
+    LightFlickerTime = 10,       
+    
+    EnableFlicker = false,
+    EnableShake = true,
+    EnableBlackout = true,
+    EnableBreakLights = false,
+    
+    GithubSound = "https://github.com/vuivuiviu2/Pressure-Hardcore-Mode/raw/refs/heads/main/warn_1.mp3",         
+    PlayGitSoundWhenSpawned = true, 
+    SoundVolume = 2,        
+    SoundPlaybackSpeed = 1,      
+    
+    DeathImage = "rbxassetid://11417375410",
+    DeathName = "Smiler",
+    DeathNotes = "I Rember that smile…",
+    DeathImageColor = Color3.fromRGB(255, 255, 255),
+    
+    -- =====================================================================
+    -- KHI THỰC THỂ SPARK/XUẤT HIỆN: CHỈ KHỞI TẠO ÂM THANH 3D
+    -- =====================================================================
+    OnSpawn = function() 
+        task.spawn(function()
+            local entityRoot = nil
+            for i = 1, 30 do
+                task.wait(0.1)
+                local entityModel = workspace:FindFirstChild("Smiler") 
+                if entityModel then
+                    entityRoot = entityModel.PrimaryPart or entityModel:FindFirstChildWhichIsA("BasePart")
+                    if entityRoot then break end
+                end
+            end
+
+            if entityRoot then
+                -- 🔊 ÂM THANH XA 1
+                local SoundFar1 = Instance.new("Sound")
+                SoundFar1.Name = "FarSound1"
+                SoundFar1.SoundId = SoundFar1Id
+                SoundFar1.Volume = 0.5
+                SoundFar1.RollOffMaxDistance = 150
+                SoundFar1.RollOffMinDistance = 10
+                SoundFar1.RollOffMode = Enum.RollOffMode.Linear
+                SoundFar1.Looped = true
+                SoundFar1.Parent = entityRoot
+                SoundFar1:Play()
+                
+                -- 🔊 ÂM THANH XA 2
+                local SoundFar2 = Instance.new("Sound")
+                SoundFar2.Name = "FarSound2"
+                SoundFar2.SoundId = SoundFar2Id
+                SoundFar2.Volume = 4
+                SoundFar2.RollOffMaxDistance = 200
+                SoundFar2.RollOffMinDistance = 10
+                SoundFar2.RollOffMode = Enum.RollOffMode.Linear
+                SoundFar2.Looped = true
+                SoundFar2.Parent = entityRoot
+                SoundFar2:Play()
+                
+                -- 🔊 ÂM THANH GẦN
+                local SoundNear = Instance.new("Sound")
+                SoundNear.Name = "NearSound"
+                SoundNear.SoundId = SoundNearId
+                SoundNear.Volume = 4
+                SoundNear.RollOffMaxDistance = 55
+                SoundNear.RollOffMinDistance = 5
+                SoundNear.RollOffMode = Enum.RollOffMode.Linear
+                SoundNear.Looped = true
+                SoundNear.Parent = entityRoot
+                SoundNear:Play()
+            end
+        end)
+    end,
+    
+    OnMoveStart = function() end,
+    OnRoomEnter = function(roomName) end,
+    OnDamagePlayer = function() end,
+    OnKillPlayer = function() end,
+    OnDespawning = function() end,
+    OnDespawned = function() end,
+})
