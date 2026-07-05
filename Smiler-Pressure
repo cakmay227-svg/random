@@ -20,6 +20,8 @@ spawnEntity({
     DelayEachRebound = 0,
     WallPenetrating = false,
     IgnoreHiding = true,
+    RoomLimits = false,
+    RoomLimitValue = 5,
     
     YOffset = Vector3.new(0, 2, 0),
     DespawnYOffset = Vector3.new(0, 30, 0),
