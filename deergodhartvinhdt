@@ -104,128 +104,13 @@ local function StopBlurLoop()
 	}):Play()
 end
 
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local Lighting = game:GetService("Lighting")
-
-local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-
-local Color = Lighting:FindFirstChild("GlitchPurple") or Instance.new("ColorCorrectionEffect")
-Color.Name = "GlitchPurple"
-Color.Enabled = false
-Color.TintColor = Color3.fromRGB(180, 60, 255)
-Color.Brightness = 0
-Color.Contrast = 0
-Color.Saturation = 0
-Color.Parent = Lighting
-
-function ShowGlitchText(Text)
-	local Gui = Instance.new("ScreenGui")
-	Gui.IgnoreGuiInset = true
-	Gui.ResetOnSpawn = false
-	Gui.DisplayOrder = 999999
-	Gui.Parent = PlayerGui
-
-	local Label = Instance.new("TextLabel")
-	Label.AnchorPoint = Vector2.new(0.5, 0.5)
-	Label.Position = UDim2.fromScale(0.5, 0.5)
-	Label.Size = UDim2.fromOffset(1200, 200)
-	Label.BackgroundTransparency = 1
-	Label.Text = Text
-	Label.Font = Enum.Font.Code -- font mỏng
-	Label.TextScaled = true
-	Label.TextColor3 = Color3.fromRGB(170, 70, 255)
-	Label.TextStrokeTransparency = 1
-	Label.TextTransparency = 0
-	Label.Rotation = 0
-	Label.Parent = Gui
-
-	local oldBrightness = Color.Brightness
-	local oldContrast = Color.Contrast
-	local oldSaturation = Color.Saturation
-	local oldTint = Color.TintColor
-
-	Color.Enabled = true
-	Color.TintColor = Color3.fromRGB(180, 60, 255)
-	Color.Brightness = 0.12
-	Color.Contrast = 0.3
-	Color.Saturation = -0.15
-
-	local Start = tick()
-
-	local Shake
-	Shake = RunService.RenderStepped:Connect(function()
-		local t = tick() - Start
-
-		if t >= 0.5 then
-			Shake:Disconnect()
-
-			TweenService:Create(Color, TweenInfo.new(0.2), {
-				Brightness = oldBrightness,
-				Contrast = oldContrast,
-				Saturation = oldSaturation,
-				TintColor = oldTint
-			}):Play()
-
-			task.delay(0.2, function()
-				Color.Enabled = false
-			end)
-
-			Gui:Destroy()
-			return
-		end
-
-		Label.Position = UDim2.fromScale(
-			0.5 + math.random(-20,20)/1000,
-			0.5 + math.random(-20,20)/1000
-		)
-
-		Label.Rotation = math.random(-35,35)
-
-		Label.TextTransparency = math.random(0,25)/100
-	end)
-end
-
-local GlitchTexts = {
-	"RUN RUN RUN",
-	"RUN AWAY",
-	"WHERE ARE YOU?",
-	"LOOK BEHIND",
-	"YOU CAN'T ESCAPE"
-}
-
-local GlitchLoop = false
-local GlitchThread
-
-function StartRandomGlitchTexts()
-	if GlitchLoop then return end
-	GlitchLoop = true
-
-	GlitchThread = task.spawn(function()
-		while GlitchLoop do
-			task.wait(math.random(4, 6))
-
-			if not GlitchLoop then
-				break
-			end
-
-			ShowGlitchText(GlitchTexts[math.random(#GlitchTexts)])
-		end
-	end)
-end
-
-function StopRandomGlitchTexts()
-	GlitchLoop = false
-end
-
 spawnEntity({
     AssetId = "rbxassetid://104515394310264",
     EntityName = "Deer God",
     MoveSpeed = 13,
     HitboxRadius = 30,
     ShakeRadius = 300,
-    DamageAmount = 20,    
+    DamageAmount = 0,    
     InstantKill = false,
     ConstantBloodSucking = true,
     DelayEachDamage = 0.2,
@@ -299,8 +184,6 @@ task.spawn(function()
 )
 end) 
 
-ShowGlitchText("???")
-
 CustomGitSound(
     "https://github.com/cakmay227-svg/random/raw/refs/heads/main/h%E1%BA%A3bing%E1%BB%9F_1.mp3?raw=true",
     5,
@@ -314,10 +197,6 @@ end,
     task.spawn(function() 
     StartFOVEffect()
     end) 
-    
-    ShowGlitchText("I'M COMING")
-    
-    StartRandomGlitchTexts() -- Bắt đầu loop
     
     StartBlurLoop()
     
@@ -336,7 +215,6 @@ end,
     pcall(function() 
     StopFOVEffect()
     StopBlurLoop()
-    StopRandomGlitchTexts() -- Dừng loop
     end) 
 end,
     OnDespawning = function() end,
@@ -344,10 +222,7 @@ end,
     task.spawn(function() 
     StopFOVEffect()
     StopBlurLoop()
-    StopRandomGlitchTexts() -- Dừng loop
     end) 
-    
-ShowGlitchText("...")
 
 task.spawn(function() 
 local bye = workspace:WaitForChild("movingSound") 
