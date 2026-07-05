@@ -225,7 +225,7 @@ spawnEntity({
     MoveSpeed = 13,
     HitboxRadius = 30,
     ShakeRadius = 300,
-    DamageAmount = 0,    
+    DamageAmount = 20,    
     InstantKill = false,
     ConstantBloodSucking = true,
     DelayEachDamage = 0.2,
