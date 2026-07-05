@@ -1,5 +1,5 @@
 -- =====================================================================
--- ENTITY SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
+-- ENTITYYY SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
 -- =====================================================================
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -39,6 +39,8 @@ local EntityConfig = {
     DelayEachRebound = 1,
     WallPenetrating = false, -- Thêm dòng này vào bảng EntityConfig
     IgnoreHiding = false, -- Thêm dòng này: false = không tấn công khi trốn tủ, true = tấn công xuyên tủ
+    RoomLimits = false,
+    RoomLimitValue = 5,
     
     YOffset = Vector3.new(0, 4, 0),
     DespawnYOffset = Vector3.new(0, 30, 0),
@@ -795,6 +797,8 @@ end
 
 local currentPath = {}
 local currentNode = nil
+local SpawnRoom = nil
+local SpawnRoomName = nil
 local cachedRoomNodes = {}
 local cachedRoom = nil
 local currentIndex = 1
@@ -970,6 +974,48 @@ end
 
 local function buildFullPath()
     local roomsList = getOrderedRooms()
+
+if EntityConfig.RoomLimits and SpawnRoom then
+	local startIndex
+
+	for i, room in ipairs(roomsList) do
+		if room == SpawnRoom or room.Name == SpawnRoomName then
+			startIndex = i
+			break
+		end
+	end
+
+	if startIndex then
+		local limited = {}
+
+		if EntityConfig.Reversed then
+			local finish = math.max(1, startIndex - EntityConfig.RoomLimitValue)
+
+			for i = startIndex, finish, -1 do
+				table.insert(limited, roomsList[i])
+			end
+		else
+			local finish = math.min(#roomsList, startIndex + EntityConfig.RoomLimitValue)
+
+			for i = startIndex, finish do
+				table.insert(limited, roomsList[i])
+			end
+		end
+
+		roomsList = limited
+	end
+end
+    
+    if EntityConfig.RoomLimits then
+	local limitedRooms = {}
+
+	for i = 1, math.min(#roomsList, EntityConfig.RoomLimitValue + 1) do
+		table.insert(limitedRooms, roomsList[i])
+	end
+
+	roomsList = limitedRooms
+end
+
     local fullPath = {}
 
     for _, room in ipairs(roomsList) do
@@ -1037,8 +1083,12 @@ local function refreshCurrentPath()
     end
 
     if not foundIndex then
-        foundIndex = findClosestNode(newPath)
-    end
+	if EntityConfig.RoomLimits then
+		foundIndex = math.clamp(currentIndex, 1, #newPath)
+	else
+		foundIndex = findClosestNode(newPath)
+	end
+end
 
     currentPath = newPath
     currentIndex = foundIndex
@@ -1053,6 +1103,10 @@ local function runEntityBehavior()
     end
 
     roomAddedConnection = Rooms.ChildAdded:Connect(function(room)
+   if EntityConfig.RoomLimits then
+	return
+end
+
         if room:IsA("Model") then
             task.wait(0.5)
             refreshCurrentPath()
@@ -1096,6 +1150,18 @@ local function runEntityBehavior()
             refreshCurrentPath()
         end
     end)
+    
+    local orderedRooms = getOrderedRooms()
+
+if EntityConfig.Reversed then
+	SpawnRoom = orderedRooms[#orderedRooms]
+else
+	SpawnRoom = orderedRooms[1]
+end
+
+if SpawnRoom then
+	SpawnRoomName = SpawnRoom.Name
+end
 
     traverseNodes(buildFullPath())
 end
