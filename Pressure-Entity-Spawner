@@ -1,5 +1,5 @@
 -- =====================================================================
--- ENTITY SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
+-- ENTITYY SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
 -- =====================================================================
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -591,41 +591,48 @@ local function fireFlickerEvent(connections, lightParts)
 end
 
 local function triggerDoubleFlicker()
-    -- Kiểm tra nếu không bật flicker thì thoát
+    -- Kiểm tra nếu không bật hiệu ứng flicker thì thoát
     if not EntityConfig.EnableFlicker then return end
     
     local connections = getSignalConnections(URSpecialEffects.OnClientEvent)
     if not connections or #connections == 0 then return end
 
-    -- Lấy danh sách đèn
-    local validLights = {}  
-    for _, descendant in ipairs(Workspace:GetDescendants()) do  
-        if descendant.Name == "Lights" and descendant:IsA("Instance") then  
-            for _, lightPart in ipairs(descendant:GetChildren()) do  
-                local name = lightPart.Name  
-                if name ~= "OceanNeon" and name ~= "Delete" and name ~= "RidgeNeon" and not lightPart:GetAttribute("TricksterSign") then  
-                    table.insert(validLights, lightPart)  
+    -- Hàm cục bộ quét tất cả các đèn hợp lệ trong Workspace
+    local function getValidLights()
+        local lights = {}
+        for _, descendant in ipairs(Workspace:GetDescendants()) do  
+            if descendant.Name == "Lights" and descendant:IsA("Instance") then  
+                for _, lightPart in ipairs(descendant:GetChildren()) do  
+                    local name = lightPart.Name  
+                    if name ~= "OceanNeon" and name ~= "Delete" and name ~= "RidgeNeon" and not lightPart:GetAttribute("TricksterSign") then  
+                        table.insert(lights, lightPart)  
+                    end  
                 end  
             end  
-        end  
-    end  
+        end
+        return lights
+    end
 
-    if #validLights == 0 then return end  
-
-    -- TÍNH NĂNG MỚI: Chớp liên tục
+    -- Chạy hiệu ứng trong thread riêng
     task.spawn(function()
         local startTime = os.clock()
         
-        -- Nếu là true: chớp cho đến khi entityFinished (despawn)
-        -- Nếu là false: chớp theo thời gian LightFlickerTime
         while not entityFinished do
+            -- Kiểm tra điều kiện thoát dựa trên cấu hình thời gian
             if not EntityConfig.LightFlickersUntilDespawn then
                 if (os.clock() - startTime) >= EntityConfig.LightFlickerTime then
                     break
                 end
             end
             
-            fireFlickerEvent(connections, validLights)
+            -- Lấy danh sách đèn mới nhất (bao gồm đèn ở phòng mới spawn)
+            local currentLights = getValidLights()
+            
+            -- Kích hoạt hiệu ứng chớp đèn
+            if #currentLights > 0 then
+                fireFlickerEvent(connections, currentLights)
+            end
+            
             task.wait(0.2) 
         end
     end)
@@ -1031,32 +1038,56 @@ local function refreshCurrentPath()
 end
 
 local function runEntityBehavior()
-
+    -- Ngắt kết nối cũ nếu có để tránh chạy trùng lặp (Memory leak)
     if roomAddedConnection then
         roomAddedConnection:Disconnect()
+        roomAddedConnection = nil
     end
 
     roomAddedConnection = Rooms.ChildAdded:Connect(function(room)
         if room:IsA("Model") then
-            task.wait(0.2)
+            task.wait(0.5)
             refreshCurrentPath()
+
+            -- TÍNH NĂNG MỚI: Tự động kích hoạt flicker cho phòng mới nếu cấu hình cho phép
+            if EntityConfig.EnableFlicker and EntityConfig.LightFlickersUntilDespawn then
+                local connections = getSignalConnections(URSpecialEffects.OnClientEvent)
+                if connections and #connections > 0 then
+                    local roomLights = {}
+                    -- Chỉ quét đèn trong phạm vi của phòng vừa spawn
+                    for _, d in ipairs(room:GetDescendants()) do
+                        if d.Name == "Lights" and d:IsA("Folder") or d:IsA("Model") then
+                            for _, lp in ipairs(d:GetChildren()) do
+                                if lp:IsA("BasePart") then
+                                    table.insert(roomLights, lp)
+                                end
+                            end
+                        end
+                    end
+                    
+                    if #roomLights > 0 then
+                        fireFlickerEvent(connections, roomLights)
+                    end
+                end
+            end
         end
     end)
     
     if roomRemovedConnection then
-    roomRemovedConnection:Disconnect()
-end
-
-roomRemovedConnection = Rooms.ChildRemoved:Connect(function(room)
-    if room == cachedRoom then
-        currentPath = cachedRoomNodes
-        currentIndex = 1
-        currentNode = currentPath[1]
-    else
-        task.wait(0.2)
-        refreshCurrentPath()
+        roomRemovedConnection:Disconnect()
+        roomRemovedConnection = nil
     end
-end)
+
+    roomRemovedConnection = Rooms.ChildRemoved:Connect(function(room)
+        if room == cachedRoom then
+            currentPath = cachedRoomNodes
+            currentIndex = 1
+            currentNode = currentPath[1]
+        else
+            task.wait(0.2)
+            refreshCurrentPath()
+        end
+    end)
 
     traverseNodes(buildFullPath())
 end
