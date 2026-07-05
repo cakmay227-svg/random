@@ -816,27 +816,35 @@ local function traverseNodes(nodesFolder)
     -- 1. Tính toán số vòng rebound ngẫu nhiên
     local totalRebounds = EntityConfig.Rebounding and math.random(EntityConfig.MinRebounds or 1, EntityConfig.MaxRebounds or 1) or 0
     if EntityConfig.Rebounding then print("Entity thực hiện: " .. totalRebounds .. " vòng rebound.") end
-
-    EntityConfig.OnMoveStart()
     
     -- 2. Khởi tạo hướng và index dựa trên chế độ Reversed
     local direction = 1
     local reboundsDone = 0
 
-    -- 3. Spawn và Snap an toàn (tránh lỗi bay)
-    if not entityModel:GetAttribute("Spawned") then
-        local startCFrame = currentPath[currentIndex].CFrame + EntityConfig.YOffset
-        entityModel:PivotTo(startCFrame)
-        entityModel:SetAttribute("Spawned", true)
-        
-        task.spawn(playCustomGitSound)
-        if EntityConfig.EnableFlicker then triggerDoubleFlicker() end
-        if EntityConfig.DelayWhenSpawned and EntityConfig.Delay > 0 then task.wait(EntityConfig.Delay) end
-        EntityConfig.OnSpawn()
-
-        task.wait(0.3) -- Ổn định vật lý
-        canRebound = true
+-- 3. Spawn và Snap an toàn
+if not entityModel:GetAttribute("Spawned") then
+    local startCFrame = currentPath[currentIndex].CFrame + EntityConfig.YOffset
+    entityModel:PivotTo(startCFrame)
+    entityModel:SetAttribute("Spawned", true)
+    
+    EntityConfig.OnSpawn() -- Trigger sự kiện Spawn
+    
+    task.spawn(playCustomGitSound)
+    if EntityConfig.EnableFlicker then triggerDoubleFlicker() end
+    
+    -- Xử lý delay gameplay (Chỉ delay đúng số giây người dùng muốn)
+    if EntityConfig.DelayWhenSpawned and EntityConfig.Delay > 0 then 
+        task.wait(EntityConfig.Delay) 
     end
+    
+    -- Ổn định vật lý (0.3 giây này là cố định, không liên quan tới Delay cài đặt)
+    task.wait(0.3) 
+    canRebound = true
+end
+
+-- Bây giờ, dù có Delay hay không, sau khi xong các lệnh trên,
+-- code mới chạy đến đây. OnMoveStart sẽ không bị "lố" thời gian.
+EntityConfig.OnMoveStart()
     
     while true do
         if entityFinished then return end
