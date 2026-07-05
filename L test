@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLAAa SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
+-- ENTITssY SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
 -- =====================================================================
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -39,8 +39,8 @@ local EntityConfig = {
     DelayEachRebound = 1,
     WallPenetrating = false, -- Thêm dòng này vào bảng EntityConfig
     IgnoreHiding = false, -- Thêm dòng này: false = không tấn công khi trốn tủ, true = tấn công xuyên tủ
-    RoomLimits = false,             -- Bật/tắt giới hạn phòng
-    RoomLimitValue = 5,             -- Số phòng tối đa được phép đi qua
+    RoomLimits = false,
+    RoomLimitValue = 5,
     
     YOffset = Vector3.new(0, 4, 0),
     DespawnYOffset = Vector3.new(0, 30, 0),
@@ -50,6 +50,7 @@ local EntityConfig = {
     ShakeIntensity = 2.5,
     ShakeSpeedMultiplier = 1.5,
     LightFlickerTime = 0,          -- Thời gian chớp đèn liên tục khi mới spawn
+    LightFlickersUntilDespawn = false,
     
     -- Cấu hình bật/tắt hiệu ứng True/False
     EnableFlicker = true,
@@ -592,34 +593,48 @@ local function fireFlickerEvent(connections, lightParts)
 end
 
 local function triggerDoubleFlicker()
-    -- Kiểm tra nếu không bật flicker thì thoát
+    -- Kiểm tra nếu không bật hiệu ứng flicker thì thoát
     if not EntityConfig.EnableFlicker then return end
     
     local connections = getSignalConnections(URSpecialEffects.OnClientEvent)
     if not connections or #connections == 0 then return end
 
-    -- Lấy danh sách đèn
-    local validLights = {}  
-    for _, descendant in ipairs(Workspace:GetDescendants()) do  
-        if descendant.Name == "Lights" and descendant:IsA("Instance") then  
-            for _, lightPart in ipairs(descendant:GetChildren()) do  
-                local name = lightPart.Name  
-                if name ~= "OceanNeon" and name ~= "Delete" and name ~= "RidgeNeon" and not lightPart:GetAttribute("TricksterSign") then  
-                    table.insert(validLights, lightPart)  
+    -- Hàm cục bộ quét tất cả các đèn hợp lệ trong Workspace
+    local function getValidLights()
+        local lights = {}
+        for _, descendant in ipairs(Workspace:GetDescendants()) do  
+            if descendant.Name == "Lights" and descendant:IsA("Instance") then  
+                for _, lightPart in ipairs(descendant:GetChildren()) do  
+                    local name = lightPart.Name  
+                    if name ~= "OceanNeon" and name ~= "Delete" and name ~= "RidgeNeon" and not lightPart:GetAttribute("TricksterSign") then  
+                        table.insert(lights, lightPart)  
+                    end  
                 end  
             end  
-        end  
-    end  
+        end
+        return lights
+    end
 
-    if #validLights == 0 then return end  
-
-    -- TÍNH NĂNG MỚI: Chớp liên tục trong thời gian LightFlickerTime
+    -- Chạy hiệu ứng trong thread riêng
     task.spawn(function()
         local startTime = os.clock()
-        -- Chớp liên tục cho đến khi đạt thời gian LightFlickerTime
-        while (os.clock() - startTime) < EntityConfig.LightFlickerTime do
-            fireFlickerEvent(connections, validLights)
-            -- Khoảng nghỉ giữa các lần phát lệnh chớp (0.2s tạo cảm giác chớp liên tục mượt mà)
+        
+        while not entityFinished do
+            -- Kiểm tra điều kiện thoát dựa trên cấu hình thời gian
+            if not EntityConfig.LightFlickersUntilDespawn then
+                if (os.clock() - startTime) >= EntityConfig.LightFlickerTime then
+                    break
+                end
+            end
+            
+            -- Lấy danh sách đèn mới nhất (bao gồm đèn ở phòng mới spawn)
+            local currentLights = getValidLights()
+            
+            -- Kích hoạt hiệu ứng chớp đèn
+            if #currentLights > 0 then
+                fireFlickerEvent(connections, currentLights)
+            end
+            
             task.wait(0.2) 
         end
     end)
@@ -782,6 +797,8 @@ end
 
 local currentPath = {}
 local currentNode = nil
+local SpawnRoom = nil
+local SpawnRoomName = nil
 local cachedRoomNodes = {}
 local cachedRoom = nil
 local currentIndex = 1
@@ -791,62 +808,80 @@ local roomRemovedConnection
 
 local function traverseNodes(nodesFolder)
     currentPath = (typeof(nodesFolder) == "table") and nodesFolder or extractPathNodes(nodesFolder)
-    
-    local roomsTraversed = 0 
-    local lastRoom = nil
 
-    if #currentPath == 0 then return end
+    if #currentPath == 0 then
+        return
+    end
+    
+    local lastRoom = nil
     
     log("PATH SIZE:", #currentPath)
 
-    -- Khởi tạo chỉ số rebound
+    -- 1. Tính toán số vòng rebound ngẫu nhiên
     local totalRebounds = EntityConfig.Rebounding and math.random(EntityConfig.MinRebounds or 1, EntityConfig.MaxRebounds or 1) or 0
-    if EntityConfig.Rebounding then print("Entity thực hiện tối đa: " .. totalRebounds .. " lần rebound.") end
-
-    EntityConfig.OnMoveStart()
+    if EntityConfig.Rebounding then print("Entity thực hiện: " .. totalRebounds .. " vòng rebound.") end
     
+    -- 2. Khởi tạo hướng và index dựa trên chế độ Reversed
     local direction = 1
     local reboundsDone = 0
 
-    -- Spawn và Snap an toàn
-    if not entityModel:GetAttribute("Spawned") then
-        local startCFrame = currentPath[currentIndex].CFrame + EntityConfig.YOffset
-        entityModel:PivotTo(startCFrame)
-        entityModel:SetAttribute("Spawned", true)
-        
-        task.spawn(playCustomGitSound)
-        if EntityConfig.EnableFlicker then triggerDoubleFlicker() end
-        if EntityConfig.DelayWhenSpawned and EntityConfig.Delay > 0 then task.wait(EntityConfig.Delay) end
-        EntityConfig.OnSpawn()
-
-        task.wait(0.3)
-        canRebound = true
+-- 3. Spawn và Snap an toàn
+if not entityModel:GetAttribute("Spawned") then
+    local startCFrame = currentPath[currentIndex].CFrame + EntityConfig.YOffset
+    entityModel:PivotTo(startCFrame)
+    entityModel:SetAttribute("Spawned", true)
+    
+    EntityConfig.OnSpawn() -- Trigger sự kiện Spawn
+    
+    task.spawn(playCustomGitSound)
+    if EntityConfig.EnableFlicker then triggerDoubleFlicker() end
+    
+    -- Xử lý delay gameplay (Chỉ delay đúng số giây người dùng muốn)
+    if EntityConfig.DelayWhenSpawned and EntityConfig.Delay > 0 then 
+        task.wait(EntityConfig.Delay) 
     end
+    
+    -- Ổn định vật lý (0.3 giây này là cố định, không liên quan tới Delay cài đặt)
+    task.wait(0.3) 
+    canRebound = true
+end
+
+-- Bây giờ, dù có Delay hay không, sau khi xong các lệnh trên,
+-- code mới chạy đến đây. OnMoveStart sẽ không bị "lố" thời gian.
+EntityConfig.OnMoveStart()
     
     while true do
         if entityFinished then return end
         
+        log(
+        "Current:", currentIndex,
+        "Next:", currentIndex + direction,
+        "Direction:", direction,
+        "Rebounds:", reboundsDone,
+        "/",
+        totalRebounds
+    )
+
         local nextIndex = currentIndex + direction
 
-        -- 1. LOGIC CHẠM BIÊN (REBOUND)
+              -- 4. Logic chạm biên (Rebound)
         if (nextIndex < 1 or nextIndex > #currentPath) then
-            -- Nếu không bật rebound, chạm biên là kết thúc di chuyển
-            if not EntityConfig.Rebounding then 
-                log("Chạm biên, không rebound -> Kết thúc.")
-                break 
-            end
-            
-            -- Nếu đã đạt đủ số lần rebound -> Kết thúc
-            if reboundsDone >= totalRebounds then 
-                log("Đã đạt giới hạn Rebound -> Kết thúc.")
-                break 
-            end
+            if not EntityConfig.Rebounding then break end
 
+            -- Nếu đã đủ số vòng, thoát luôn
+            if reboundsDone >= totalRebounds then
+    log("BREAK BECAUSE REBOUND LIMIT")
+    log("Done:", reboundsDone, "Need:", totalRebounds)
+    break
+end
+
+            -- Chỉ tăng rebound khi chạm biên và chưa bị khóa
             if canRebound and not reboundLock then
                 reboundLock = true
                 reboundsDone += 1
-                log(">>> Rebound lần thứ:", reboundsDone, "/", totalRebounds)
+                print(">>> Rebound thành công lần thứ:", reboundsDone, "/", totalRebounds)
                 
+                -- Tạm dừng di chuyển trong thời gian delay rebound
                 isReboundingPaused = true
                 task.spawn(function()
                     task.wait(EntityConfig.DelayEachRebound or 1)
@@ -855,6 +890,7 @@ local function traverseNodes(nodesFolder)
                 end)
             end
             
+            -- Đảo chiều & reset chỉ số index ngay lập tức
             direction *= -1
             nextIndex = currentIndex + direction
         end        
@@ -866,48 +902,37 @@ local function traverseNodes(nodesFolder)
         if targetNode then
             local targetPos = targetNode.Position + EntityConfig.YOffset
             
-            -- Di chuyển tới node hiện tại
+            -- Di chuyển tới node
             while (rootPart.Position - targetPos).Magnitude > EntityConfig.Tolerance do
                 if entityFinished then return end
+                -- Nếu đang trong thời gian delay rebound, đứng yên
                 if isReboundingPaused then task.wait() continue end
 
                 local dt = task.wait()
                 local offset = targetPos - rootPart.Position
                 local moveDir = offset.Unit
 
+                -- Giới hạn khoảng cách di chuyển (chống bay)
                 local moveStep = math.min(EntityConfig.MoveSpeed * dt, offset.Magnitude)
                 entityModel:PivotTo(entityModel:GetPivot() + (moveDir * moveStep))
             end
             
-            -- 2. LOGIC ĐẾM PHÒNG VÀ ĐIỀU KIỆN DỪNG (LIMIT)
             local room = targetNode:FindFirstAncestorWhichIsA("Model")
-            if room and room ~= lastRoom then
-                if lastRoom ~= nil then
-                    roomsTraversed += 1
-                    print("Entity đã đi qua phòng thứ: " .. roomsTraversed)
-                    
-                    -- Kiểm tra nếu đạt Limit phòng
-                    if EntityConfig.RoomLimits and roomsTraversed >= EntityConfig.RoomLimitValue then
-                        -- CHỈ DỪNG NẾU ĐÃ HẾT LƯỢT REBOUND
-                        if reboundsDone >= totalRebounds then
-                            print("Đạt giới hạn phòng VÀ hết lượt rebound -> Despawn.")
-                            break -- Thoát vòng lặp while để xuống phần despawn bên dưới
-                        else
-                            print("Đạt giới hạn phòng nhưng còn lượt rebound -> Tiếp tục hành trình.")
-                        end
-                    end
-                end
-                
-                lastRoom = room
-                cacheRoomNodes(room)
-                EntityConfig.OnRoomEnter(room.Name)
-            end
+
+if room and room ~= lastRoom then
+    lastRoom = room
+
+    cacheRoomNodes(room)
+
+    EntityConfig.OnRoomEnter(room.Name)
+end
         end
     end
 
-    -- ĐIỂM DỪNG CHUNG
-    EntityConfig.OnDespawning()
-    despawnEntity()
+    log("WHILE ENDED")
+
+EntityConfig.OnDespawning()
+despawnEntity()
 end
 
 -- =====================================================================
@@ -949,6 +974,48 @@ end
 
 local function buildFullPath()
     local roomsList = getOrderedRooms()
+
+if EntityConfig.RoomLimits and SpawnRoom then
+	local startIndex
+
+	for i, room in ipairs(roomsList) do
+		if room == SpawnRoom or room.Name == SpawnRoomName then
+			startIndex = i
+			break
+		end
+	end
+
+	if startIndex then
+		local limited = {}
+
+		if EntityConfig.Reversed then
+			local finish = math.max(1, startIndex - EntityConfig.RoomLimitValue)
+
+			for i = startIndex, finish, -1 do
+				table.insert(limited, roomsList[i])
+			end
+		else
+			local finish = math.min(#roomsList, startIndex + EntityConfig.RoomLimitValue)
+
+			for i = startIndex, finish do
+				table.insert(limited, roomsList[i])
+			end
+		end
+
+		roomsList = limited
+	end
+end
+    
+    if EntityConfig.RoomLimits then
+	local limitedRooms = {}
+
+	for i = 1, math.min(#roomsList, EntityConfig.RoomLimitValue + 1) do
+		table.insert(limitedRooms, roomsList[i])
+	end
+
+	roomsList = limitedRooms
+end
+
     local fullPath = {}
 
     for _, room in ipairs(roomsList) do
@@ -1016,8 +1083,12 @@ local function refreshCurrentPath()
     end
 
     if not foundIndex then
-        foundIndex = findClosestNode(newPath)
-    end
+	if EntityConfig.RoomLimits then
+		foundIndex = math.clamp(currentIndex, 1, #newPath)
+	else
+		foundIndex = findClosestNode(newPath)
+	end
+end
 
     currentPath = newPath
     currentIndex = foundIndex
@@ -1025,32 +1096,72 @@ local function refreshCurrentPath()
 end
 
 local function runEntityBehavior()
-
+    -- Ngắt kết nối cũ nếu có để tránh chạy trùng lặp (Memory leak)
     if roomAddedConnection then
         roomAddedConnection:Disconnect()
+        roomAddedConnection = nil
     end
 
     roomAddedConnection = Rooms.ChildAdded:Connect(function(room)
+   if EntityConfig.RoomLimits then
+	return
+end
+
         if room:IsA("Model") then
+            task.wait(0.5)
+            refreshCurrentPath()
+
+            -- TÍNH NĂNG MỚI: Tự động kích hoạt flicker cho phòng mới nếu cấu hình cho phép
+            if EntityConfig.EnableFlicker and EntityConfig.LightFlickersUntilDespawn then
+                local connections = getSignalConnections(URSpecialEffects.OnClientEvent)
+                if connections and #connections > 0 then
+                    local roomLights = {}
+                    -- Chỉ quét đèn trong phạm vi của phòng vừa spawn
+                    for _, d in ipairs(room:GetDescendants()) do
+                        if d.Name == "Lights" and d:IsA("Folder") or d:IsA("Model") then
+                            for _, lp in ipairs(d:GetChildren()) do
+                                if lp:IsA("BasePart") then
+                                    table.insert(roomLights, lp)
+                                end
+                            end
+                        end
+                    end
+                    
+                    if #roomLights > 0 then
+                        fireFlickerEvent(connections, roomLights)
+                    end
+                end
+            end
+        end
+    end)
+    
+    if roomRemovedConnection then
+        roomRemovedConnection:Disconnect()
+        roomRemovedConnection = nil
+    end
+
+    roomRemovedConnection = Rooms.ChildRemoved:Connect(function(room)
+        if room == cachedRoom then
+            currentPath = cachedRoomNodes
+            currentIndex = 1
+            currentNode = currentPath[1]
+        else
             task.wait(0.2)
             refreshCurrentPath()
         end
     end)
     
-    if roomRemovedConnection then
-    roomRemovedConnection:Disconnect()
+    local orderedRooms = getOrderedRooms()
+
+if EntityConfig.Reversed then
+	SpawnRoom = orderedRooms[#orderedRooms]
+else
+	SpawnRoom = orderedRooms[1]
 end
 
-roomRemovedConnection = Rooms.ChildRemoved:Connect(function(room)
-    if room == cachedRoom then
-        currentPath = cachedRoomNodes
-        currentIndex = 1
-        currentNode = currentPath[1]
-    else
-        task.wait(0.2)
-        refreshCurrentPath()
-    end
-end)
+if SpawnRoom then
+	SpawnRoomName = SpawnRoom.Name
+end
 
     traverseNodes(buildFullPath())
 end
