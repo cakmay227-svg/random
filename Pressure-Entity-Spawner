@@ -1275,33 +1275,20 @@ local function checkAndCache(obj)
         return
     end
 
-    if obj:IsA("BasePart") and obj.Material == Enum.Material.Neon then
-        local path = obj:GetFullName():lower()
-        if path:find("light") or path:find("neon") or path:find("nec") then
-            local associatedLights = {}
-            for _, child in ipairs(obj:GetChildren()) do
-                if child:IsA("Light") then table.insert(associatedLights, child) end
-            end
-            if obj.Parent then
-                for _, sibling in ipairs(obj.Parent:GetChildren()) do
-                    if sibling:IsA("Light") then table.insert(associatedLights, sibling) end
-                end
-            end
-            table.insert(LightCache, { NeonPart = obj, Lights = associatedLights, Broken = false })
-        end
-    elseif obj:IsA("Light") then
-        local parent = obj.Parent
-        if parent and parent:IsA("BasePart") and parent.Material ~= Enum.Material.Neon then
-            local path = obj:GetFullName():lower()
-            if path:find("light") or path:find("neon") or path:find("nec") then
-                local alreadyCached = false
-                for _, cache in ipairs(LightCache) do if cache.NeonPart == parent then alreadyCached = true break end end
-                if not alreadyCached then
-                    table.insert(LightCache, { NeonPart = parent, Lights = {obj}, Broken = false })
-                end
-            end
-        end
+    if obj:IsA("BasePart") then
+    local path = obj:GetFullName()
+
+    if path:find("%.Lights%.Neon")
+    or path:find("%.Lights%.SmallNeon")
+    or path:find("%.Lights%.Nec") then
+
+        table.insert(LightCache,{
+            NeonPart = obj,
+            RootModel = obj.Parent,
+            Broken = false
+        })
     end
+end
 end
 
 -- Khởi tạo Cache ban đầu
@@ -1338,23 +1325,27 @@ local function scanAndExplodeFast()
         if neonPart and neonPart.Parent and not data.Broken then
             if (neonPart.Position - entityPosition).Magnitude <= EntityConfig.LightBreakingRange then
                 data.Broken = true
-                if neonPart.Material == Enum.Material.Neon then
-                    neonPart.Material = Enum.Material.Glass
-                    playBreakSound(neonPart)
-                    createPressureSparkEffect(neonPart)
+                local rootModel = data.RootModel
+
+if rootModel then
+playBreakSound(neonPart)
+createPressureSparkEffect(neonPart)
+
+    for _, descendant in ipairs(rootModel:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            descendant.Material = Enum.Material.Glass
+        elseif descendant:IsA("Light") then
+            task.spawn(function()
+                local endTime = os.clock() + 0.2
+                while os.clock() < endTime do
+                    descendant.Enabled = not descendant.Enabled
+                    task.wait(math.random(1,6)/100)
                 end
-                for _, lightObj in ipairs(data.Lights) do
-                    if lightObj and lightObj.Parent then
-                        task.spawn(function()
-                            local endTime = os.clock() + 0.2
-                            while os.clock() < endTime do
-                                lightObj.Enabled = not lightObj.Enabled
-                                task.wait(math.random(1, 6) / 100)
-                            end
-                            lightObj.Enabled = false
-                        end)
-                    end
-                end
+                descendant.Enabled = false
+            end)
+        end
+    end
+end
             end
         end
     end
