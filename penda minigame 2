@@ -220,6 +220,17 @@ local PushSounds = {
 	)
 }
 
+task.spawn(function() 
+CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/lv_0_20260707211255.mp3?raw=true",
+    1.5,
+    "jumpscare",
+    "jumpscare",
+    workspace,
+    false
+)
+end) 
+
 -- Không phát lúc preload
 for _, sound in ipairs(PushSounds) do
 	sound:Stop()
@@ -384,7 +395,9 @@ if not circle then
 end
 
 local targetPosition = circle.Position
-local followSpeed = 10 -- nhỏ hơn = ì hơn, lớn hơn = bám tay hơn
+local PlayerFollowSpeed = 14 -- tốc độ khi người chơi điều khiển
+local PushFollowSpeed = 300 -- tốc độ khi Pandemonium đẩy
+local CurrentFollowSpeed = PlayerFollowSpeed
 local shakeTime = 0
 local shakeAmount = 5 -- độ rung (pixel)
 local shakeSpeedX = 13
@@ -392,6 +405,7 @@ local shakeSpeedY = 18
 local FillTime = 1.5   -- đầy trong 1.5 giây
 local DrainTime = 2.5    -- cạn trong 3 giây
 local Frozen = false
+local IsBeingPushed = false
 local PressureShake = true
 local PressureBlackout = true
 local CameraShakeConnection
@@ -400,6 +414,7 @@ local MainSound = workspace:WaitForChild("pandemobaba")
 local ThemeEndTime = SelectedTheme.StopTime
 local BlackFrame
 local ActiveShaker
+local PushForce = Vector2.new(0,0)
 
 local RunService = game:GetService("RunService")
 
@@ -664,9 +679,9 @@ end)
 
 else
 	UserInputService.InputChanged:Connect(function(input)
-		if Frozen or not circle or not circle.Parent then
-			return
-		end
+		if Frozen or IsBeingPushed or not circle or not circle.Parent then
+    return
+end
 
 		if input.UserInputType ~= Enum.UserInputType.MouseMovement then
 			return
@@ -809,16 +824,7 @@ image.Size = UDim2.fromOffset(180,180)
 image.Image = "rbxassetid://113218985749659"
 image.Parent = bg
 
-task.spawn(function() 
-CustomGitSound(
-    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/lv_0_20260707211255.mp3?raw=true",
-    1.5,
-    "jumpscare",
-    "jumpscare",
-    workspace,
-    false
-)
-end) 
+workspace.jumpscare:Play()
 
 TweenService:Create(
     image,
@@ -914,8 +920,18 @@ RunService.RenderStepped:Connect(function(dt)
 	
 	shakeTime += dt
 
-	local alpha = math.clamp(dt * followSpeed, 0, 1)
-	smoothPosition = smoothPosition:Lerp(targetPosition, alpha)
+	local alpha = math.clamp(dt * CurrentFollowSpeed, 0, 1)
+	local pushOffset = UDim2.fromOffset(
+    PushForce.X * dt,
+    PushForce.Y * dt
+)
+
+smoothPosition = smoothPosition:Lerp(
+    targetPosition + pushOffset,
+    alpha
+)
+
+PushForce *= 0.85
 
 	local ox =
     math.sin(shakeTime * shakeSpeedX) * shakeAmount +
@@ -1109,7 +1125,27 @@ end
 randomY = math.random(minY, maxY)
 	end
 
-	targetPosition = UDim2.fromOffset(randomX, randomY)
+	IsBeingPushed = true
+
+CurrentFollowSpeed = PushFollowSpeed
+
+local current = Vector2.new(
+    circle.Position.X.Offset,
+    circle.Position.Y.Offset
+)
+
+local target = Vector2.new(randomX, randomY)
+
+local direction = (target - current).Unit
+
+PushForce = direction * 3000
+
+targetPosition = UDim2.fromOffset(randomX, randomY)
+
+task.delay(0.15,function()
+    IsBeingPushed = false
+    CurrentFollowSpeed = PlayerFollowSpeed
+end)
 	
 	task.spawn(function()
 
