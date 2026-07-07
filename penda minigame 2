@@ -610,40 +610,66 @@ StartPressureEffects()
 
 local UserInputService = game:GetService("UserInputService")
 
-local UserInputService = game:GetService("UserInputService")
-
 if UserInputService.TouchEnabled then
-	UserInputService.TouchTap:Connect(function(touches)
-		if Frozen or not circle or not circle.Parent then
-			return
-		end
+    local camera = workspace.CurrentCamera
+    local lastLook = camera.CFrame.LookVector
 
-		local touchPos = touches[1]
-		if not touchPos then
-			return
-		end
+    RunService.RenderStepped:Connect(function()
+        if Frozen or not circle or not circle.Parent then
+            lastLook = camera.CFrame.LookVector
+            return
+        end
 
-		local parent = circle.Parent
-		local parentPos = parent.AbsolutePosition
-		local parentSize = parent.AbsoluteSize
-		local circleSize = circle.AbsoluteSize
+        local newLook = camera.CFrame.LookVector
 
-		local Overflow = 50
+        local yaw =
+    math.atan2(newLook.X, newLook.Z) -
+    math.atan2(lastLook.X, lastLook.Z)
 
-		local x = math.clamp(
-			touchPos.X - parentPos.X - circleSize.X/2,
-			-Overflow,
-			parentSize.X - circleSize.X + Overflow
-		)
+local pitch =
+    math.asin(lastLook.Y) -
+    math.asin(newLook.Y)
 
-		local y = math.clamp(
-			touchPos.Y - parentPos.Y - circleSize.Y/2,
-			-Overflow,
-			parentSize.Y - circleSize.Y + Overflow
-		)
+local deadzone = math.rad(0.15) -- tăng lên 0.2~0.3 nếu vẫn bị
 
-		targetPosition = UDim2.fromOffset(x, y)
-	end)
+if math.abs(yaw) < deadzone then
+    yaw = 0
+end
+
+if math.abs(pitch) < deadzone then
+    pitch = 0
+end
+
+lastLook = newLook
+
+        local sensitivity = 600 -- chỉnh theo ý
+
+        local parent = circle.Parent
+        local parentSize = parent.AbsoluteSize
+        local circleSize = circle.AbsoluteSize
+
+        local Overflow = 50
+
+        local x = math.clamp(
+    targetPosition.X.Offset - yaw * sensitivity,
+    -Overflow,
+    parentSize.X - circleSize.X + Overflow
+)
+
+local y = math.clamp(
+    targetPosition.Y.Offset + pitch * sensitivity,
+    -Overflow,
+    parentSize.Y - circleSize.Y + Overflow
+)
+
+        local alpha = 0.2 -- 0.1~0.3
+
+targetPosition = targetPosition:Lerp(
+    UDim2.fromOffset(x, y),
+    alpha
+)
+    end)
+
 else
 	UserInputService.InputChanged:Connect(function(input)
 		if Frozen or not circle or not circle.Parent then
