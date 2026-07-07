@@ -1,5 +1,5 @@
 -- =====================================================================
--- BLAAAAA SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
+-- MRBEAST SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
 -- =====================================================================
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -567,14 +567,6 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
                                     end
                                 end
                             end
-                        end
-                        
-                        -- Nếu player vào tủ, dừng Chase và quay lại đi Node
-                        if isSafeInLocker then
-                            isChasing = false
-                            isReboundingPaused = false
-                            if chaseConnection then chaseConnection:Disconnect() end
-                            return
                         end
                         
                         -- 2. DI CHUYỂN MƯỢT
