@@ -174,7 +174,7 @@ local SelectedTheme = Themes[math.random(#Themes)]
 task.spawn(function()
     CustomGitSound(
         SelectedTheme.Url,
-        1,
+        1.5,
         SelectedTheme.File,
         "pandemobaba",
         workspace,
@@ -219,17 +219,6 @@ local PushSounds = {
 		false
 	)
 }
-
-task.spawn(function() 
-CustomGitSound(
-    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/lv_0_20260707211255.mp3?raw=true",
-    1.5,
-    "jumpscare",
-    "jumpscare",
-    workspace,
-    false
-)
-end) 
 
 -- Không phát lúc preload
 for _, sound in ipairs(PushSounds) do
@@ -354,16 +343,12 @@ if circle then
 	)
 
 	TweenService:Create(
-		circle,
-		TweenInfo.new(
-			1,
-			Enum.EasingStyle.Back,
-			Enum.EasingDirection.Out
-		),
-		{
-			Size = originalCircleSize
-		}
-	):Play()
+    circle,
+    TweenInfo.new(1),
+    {
+        Size = originalCircleSize
+    }
+):Play()
 
 	task.wait(1)
 end
@@ -395,8 +380,9 @@ if not circle then
 end
 
 local targetPosition = circle.Position
-local PlayerFollowSpeed = 14 -- tốc độ khi người chơi điều khiển
-local PushFollowSpeed = 300 -- tốc độ khi Pandemonium đẩy
+local pushTarget = nil
+local PlayerFollowSpeed = 25 -- tốc độ khi người chơi điều khiển
+local PushFollowSpeed = 20 -- tốc độ khi Pandemonium đẩy
 local CurrentFollowSpeed = PlayerFollowSpeed
 local shakeTime = 0
 local shakeAmount = 5 -- độ rung (pixel)
@@ -660,7 +646,7 @@ if UserInputService.TouchEnabled then
     local parentSize = parent.AbsoluteSize
     local circleSize = circle.AbsoluteSize
 
-    local Overflow = 50
+    local Overflow = 90
 
     local x = math.clamp(
         targetPosition.X.Offset + delta.X * sensitivity,
@@ -694,7 +680,7 @@ end
 		local parentSize = parent.AbsoluteSize
 		local circleSize = circle.AbsoluteSize
 
-		local Overflow = 50
+		local Overflow = 90
 
 		local x = math.clamp(
 			mousePos.X - parentPos.X - circleSize.X/2,
@@ -796,6 +782,18 @@ if currentPercent <= 0 and not Ended then
 	if miniGame then
 		miniGame:Destroy()
 	end
+	
+	for _, v in ipairs(workspace:GetChildren()) do
+		if v:IsA("Sound") and (
+			v.Name == "pandemobaba"
+			or v.Name == "Push1"
+			or v.Name == "Push2"
+			or v.Name == "Push3"
+			or v.Name == "Push4"
+		) then
+			v:Destroy()
+		end
+	end
 
 	local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -824,7 +822,16 @@ image.Size = UDim2.fromOffset(180,180)
 image.Image = "rbxassetid://113218985749659"
 image.Parent = bg
 
-workspace.jumpscare:Play()
+task.spawn(function() 
+CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/lv_0_20260707211255.mp3?raw=true",
+    1.5,
+    "jumpscare",
+    "jumpscare",
+    workspace,
+    false
+)
+end) 
 
 TweenService:Create(
     image,
@@ -926,8 +933,10 @@ RunService.RenderStepped:Connect(function(dt)
     PushForce.Y * dt
 )
 
+local goal = pushTarget or targetPosition
+
 smoothPosition = smoothPosition:Lerp(
-    targetPosition + pushOffset,
+    goal + pushOffset,
     alpha
 )
 
@@ -1059,11 +1068,13 @@ while true do
 
 	local Overflow = 50
 
-local minX = -Overflow
-local maxX = parentSize.X - circleSize.X + Overflow
+local Extra = 50
 
-local minY = -Overflow
-local maxY = parentSize.Y - circleSize.Y + Overflow
+local minX = -circleSize.X/2 - Extra
+local maxX = parentSize.X - circleSize.X/2 + Extra
+
+local minY = -circleSize.Y/2 - Extra
+local maxY = parentSize.Y - circleSize.Y/2 + Extra
 
 	local randomX, randomY
 
@@ -1098,27 +1109,30 @@ end)
 -- Chọn ngẫu nhiên trong 15 điểm xa nhất
 local edgePadding = 0 -- 0 = chạm mép, tăng lên nếu sợ cắt UI
 
-local side = math.random(4)
+local localMiddle = middle.AbsolutePosition - parent.AbsolutePosition + middle.AbsoluteSize / 2
 
-if side == 1 then
-    -- Trái
+local leftDist = localMiddle.X
+local rightDist = parentSize.X - localMiddle.X
+local topDist = localMiddle.Y
+local bottomDist = parentSize.Y - localMiddle.Y
+
+local biggest = math.max(leftDist, rightDist, topDist, bottomDist)
+
+if biggest == leftDist then
     randomX = minX
-randomY = math.random(minY, maxY)
+    randomY = math.random(minY, maxY)
 
-elseif side == 2 then
-    -- Phải
+elseif biggest == rightDist then
     randomX = maxX
-randomY = math.random(minY, maxY)
+    randomY = math.random(minY, maxY)
 
-elseif side == 3 then
-    -- Trên
+elseif biggest == topDist then
     randomX = math.random(minX, maxX)
-randomY = minY
+    randomY = minY
 
 else
-    -- Dưới
     randomX = math.random(minX, maxX)
-randomY = maxY
+    randomY = maxY
 end
 	else
 		randomX = math.random(minX, maxX)
@@ -1138,11 +1152,14 @@ local target = Vector2.new(randomX, randomY)
 
 local direction = (target - current).Unit
 
-PushForce = direction * 3000
+PushForce = direction * 7000
 
-targetPosition = UDim2.fromOffset(randomX, randomY)
+pushTarget = UDim2.fromOffset(randomX, randomY)
 
-task.delay(0.15,function()
+task.delay(0.15, function()
+    targetPosition = pushTarget
+    pushTarget = nil
+
     IsBeingPushed = false
     CurrentFollowSpeed = PlayerFollowSpeed
 end)
