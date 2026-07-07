@@ -30,7 +30,7 @@ spawnEntity({
     EntityName = "Pandemonium",
     MoveSpeed = 30,
     HitboxRadius = 70,
-    ShakeRadius = 0,
+    ShakeRadius = 70,
     DamageAmount = 0,    
     InstantKill = true,
     ConstantBloodSucking = false,
@@ -60,11 +60,11 @@ spawnEntity({
     MaxDarkness = 0.2,
     ShakeIntensity = 2.5,
     ShakeSpeedMultiplier = 1.5,
-    LightFlickerTime = 1.2,       
+    LightFlickerTime = 2,       
     
     EnableFlicker = true,
     EnableShake = false,
-    EnableBlackout = false,
+    EnableBlackout = true,
     EnableBreakLights = false,
     
     GithubSound = "https://github.com/cakmay227-svg/random/raw/refs/heads/main/PandemoniumSpawn.mp3",         
