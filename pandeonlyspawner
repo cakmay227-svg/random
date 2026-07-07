@@ -45,6 +45,7 @@ local EntityConfig = {
     ChaseWhenInHitbox = false, -- Thêm mới
     ChaseSpeed = 40,
     ChaseHitbox = 15,
+    ChaseDelay = 1.5,
     
     YOffset = Vector3.new(0, 4, 0),
     DespawnYOffset = Vector3.new(0, 30, 0),
@@ -89,6 +90,7 @@ local EntityConfig = {
     OnDamagePlayer = function() end,
     OnKillPlayer = function() end,
     OnChase = function() end,
+    OnCatched = function() end,
     OnDespawning = function() end,
     OnDespawned = function() end,
 }
@@ -533,43 +535,66 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
             end
             
             -- 3. Thực thi Chase hoặc Sát thương cũ
-            if canHit then
+                        if canHit then
                 if EntityConfig.ChaseWhenInHitbox then
                     isChasing = true
+                    EntityConfig.OnChase() -- Gọi callback đuổi
                     
-                    -- Trong phần xử lý Chase bên dưới:
-chaseConnection = RunService.RenderStepped:Connect(function(dt)
-    if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then 
-        despawnEntity()
-        return 
-    end
-    
-    local targetHrp = Player.Character.HumanoidRootPart
-    local distanceToPlayer = (targetHrp.Position - rootPart.Position).Magnitude
-    
-    -- 1. KIỂM TRA TỦ (để dừng Chase nếu player an toàn)
-    -- (Sử dụng logic kiểm tra Locker như đã thảo luận ở bước trước)
-    
-    -- 2. DI CHUYỂN MƯỢT
-    local dir = (targetHrp.Position - rootPart.Position).Unit
-    rootPart.CFrame = rootPart.CFrame + (dir * EntityConfig.ChaseSpeed * dt)
-    
-    -- 3. KÍCH HOẠT SỰ KIỆN KHI VÀO CHASEHITBOX
-    -- Thay vì đợi Touched, ta kiểm tra khoảng cách với ChaseHitbox
-    if distanceToPlayer <= EntityConfig.ChaseHitbox then
-        if chaseConnection then chaseConnection:Disconnect() end
-        
-        -- Kích hoạt sự kiện sát thương hoặc hiệu ứng tại đây
-        local damageRemote = ReplicatedStorage:FindFirstChild("LocalDamage", true) or ReplicatedStorage:FindFirstChild("ChangeHealth", true)
-        if damageRemote then
-            local finalDamage = (EntityConfig.InstantKill) and 999 or EntityConfig.DamageAmount
-            damageRemote:FireServer(finalDamage, "ChaseKill", 1, nil)
-        end
-        
-        -- Gọi despawn hoặc chuyển trạng thái
-        despawnEntity()
-    end
-end)
+                    -- Dừng di chuyển theo node
+                    isReboundingPaused = true
+                    
+                    -- Đợi ChaseDelay trước khi thực sự lao vào đuổi
+                    task.wait(EntityConfig.ChaseDelay or 1.5)
+                    
+                    chaseConnection = RunService.RenderStepped:Connect(function(dt)
+                        if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then 
+                            despawnEntity()
+                            return 
+                        end
+                        
+                        -- 1. KIỂM TRA TỦ (Dừng Chase nếu Player an toàn)
+                        local isSafeInLocker = false
+                        local roomsFolder = Gameplay:FindFirstChild("Rooms")
+                        if roomsFolder then
+                            for _, descendant in ipairs(roomsFolder:GetDescendants()) do
+                                if descendant:IsA("Model") and descendant.Name == "Locker" then
+                                    local playerInValue = descendant:FindFirstChild("PlayerIn", true)
+                                    if playerInValue and playerInValue.Value == true then
+                                        isSafeInLocker = true
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                        
+                        if isSafeInLocker then
+                            isChasing = false
+                            if chaseConnection then chaseConnection:Disconnect() end
+                            isReboundingPaused = false -- Cho phép quay lại logic đi node
+                            return
+                        end
+                        
+                        -- 2. DI CHUYỂN MƯỢT
+                        local targetHrp = Player.Character.HumanoidRootPart
+                        local dir = (targetHrp.Position - rootPart.Position).Unit
+                        rootPart.CFrame = rootPart.CFrame + (dir * EntityConfig.ChaseSpeed * dt)
+                        
+                        -- 3. KÍCH HOẠT SỰ KIỆN KHI VÀO CHASEHITBOX
+                        local distanceToPlayer = (targetHrp.Position - rootPart.Position).Magnitude
+                        if distanceToPlayer <= EntityConfig.ChaseHitbox then
+                            if chaseConnection then chaseConnection:Disconnect() end
+                            
+                            EntityConfig.OnCatched() 
+                            
+                            local damageRemote = ReplicatedStorage:FindFirstChild("LocalDamage", true) or ReplicatedStorage:FindFirstChild("ChangeHealth", true)
+                            if damageRemote then
+                                local finalDamage = (EntityConfig.InstantKill) and 999 or EntityConfig.DamageAmount
+                                damageRemote:FireServer(finalDamage, "ChaseKill", 1, nil)
+                            end
+                            
+                            despawnEntity()
+                        end
+                    end)
 
                     EntityConfig.OnChase() -- Gọi callback đuổi
                     
