@@ -1,5 +1,5 @@
 -- =====================================================================
--- ENTTIITITFI SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
+-- BLAAAAA SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
 -- =====================================================================
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -555,7 +555,27 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
                         end
                         
                         -- 1. KIỂM TRA TỦ (Dừng Chase nếu Player an toàn)
-                   
+                        local isSafeInLocker = false
+                        local roomsFolder = Gameplay:FindFirstChild("Rooms")
+                        if roomsFolder then
+                            for _, descendant in ipairs(roomsFolder:GetDescendants()) do
+                                if descendant:IsA("Model") and descendant.Name == "Locker" then
+                                    local playerInValue = descendant:FindFirstChild("PlayerIn", true)
+                                    if playerInValue and playerInValue.Value == true then
+                                        isSafeInLocker = true
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                        
+                        -- Nếu player vào tủ, dừng Chase và quay lại đi Node
+                        if isSafeInLocker then
+                            isChasing = false
+                            isReboundingPaused = false
+                            if chaseConnection then chaseConnection:Disconnect() end
+                            return
+                        end
                         
                         -- 2. DI CHUYỂN MƯỢT
                         local targetHrp = Player.Character.HumanoidRootPart
@@ -584,17 +604,14 @@ if roomsFolder then
 end
 
 if playerWasInLocker then
+    -- Bắt sống trong tủ
     EntityConfig.OnCatched()
+else
+    -- Bắt ngoài -> dùng toàn bộ hệ thống damage hiện có
+    executeJumpscare()
 end
-                            
-                            -- Gây sát thương kết liễu
-                            local damageRemote = ReplicatedStorage:FindFirstChild("LocalDamage", true) or ReplicatedStorage:FindFirstChild("ChangeHealth", true)
-                            if damageRemote then
-                                local finalDamage = (EntityConfig.InstantKill) and 999 or EntityConfig.DamageAmount
-                                damageRemote:FireServer(finalDamage, "ChaseKill", 1, nil)
-                            end
-                            
-                            despawnEntity()
+
+despawnEntity()
                         end
                     end)
                     
