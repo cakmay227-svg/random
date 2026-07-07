@@ -149,16 +149,38 @@ function CustomGitSound(soundlink, volume, filename, soundName, parent, looped)
     return sound
 end
 
-task.spawn(function() 
-CustomGitSound(
-    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/pandevuivuiviu2.mp3?raw=true",
-    1,
-    "pandemonium",
-    "pandemobaba",
-    workspace,
-    false
-)
-end) 
+local Themes = {
+    {
+        Url = "https://github.com/cakmay227-svg/random/raw/refs/heads/main/pandevuivuiviu2.mp3?raw=true",
+        File = "pandemonium",
+        StopTime = 57
+    },
+
+    {
+        Url = "https://github.com/cakmay227-svg/random/raw/refs/heads/main/waitoftheworld.mp3",
+        File = "waitoftheworld",
+        StopTime = 77 -- 1:17
+    },
+
+    {
+        Url = "https://github.com/cakmay227-svg/random/raw/refs/heads/main/knockknock.mp3",
+        File = "knockknock",
+        StopTime = 39
+    }
+}
+
+local SelectedTheme = Themes[math.random(#Themes)]
+
+task.spawn(function()
+    CustomGitSound(
+        SelectedTheme.Url,
+        1,
+        SelectedTheme.File,
+        "pandemobaba",
+        workspace,
+        false
+    )
+end)
 
 local PushSounds = {
 	CustomGitSound(
@@ -368,13 +390,14 @@ local shakeAmount = 5 -- độ rung (pixel)
 local shakeSpeedX = 13
 local shakeSpeedY = 18
 local FillTime = 1.5   -- đầy trong 1.5 giây
-local DrainTime = 2    -- cạn trong 3 giây
+local DrainTime = 2.5    -- cạn trong 3 giây
 local Frozen = false
 local PressureShake = true
 local PressureBlackout = true
 local CameraShakeConnection
 local BlackoutConnection
 local MainSound = workspace:WaitForChild("pandemobaba")
+local ThemeEndTime = SelectedTheme.StopTime
 local BlackFrame
 local ActiveShaker
 
@@ -400,7 +423,7 @@ local camera = workspace.CurrentCamera
 
 if PressureShake then
 	CameraShakeConnection = RunService.RenderStepped:Connect(function()
-	if MainSound.TimePosition >= 57 then
+	if MainSound.TimePosition >= ThemeEndTime then
 		CameraShakeConnection:Disconnect()
 		CameraShakeConnection = nil
 		return
@@ -442,7 +465,7 @@ end
 -- blackout chạy mãi
 if PressureBlackout then
 	BlackoutConnection = RunService.RenderStepped:Connect(function()
-		if MainSound.TimePosition >= 57 then
+		if MainSound.TimePosition >= ThemeEndTime then
 			return
 		end
 		
@@ -938,7 +961,7 @@ end)
 
 task.spawn(function()
 	while MainSound.Parent do
-		if MainSound.TimePosition >= 57 then
+		if MainSound.TimePosition >= ThemeEndTime then
 			Frozen = true
 			
 			if CameraShakeConnection then
