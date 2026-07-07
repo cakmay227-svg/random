@@ -1,5 +1,5 @@
 -- =====================================================================
--- ENTITY SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
+-- ENTITTITIIT SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)
 -- =====================================================================
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -535,17 +535,19 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
             end
             
             -- 3. Thực thi Chase hoặc Sát thương cũ
-                        if canHit then
+                                    -- 3. Thực thi Sát thương
+            if canHit then
                 if EntityConfig.ChaseWhenInHitbox then
                     isChasing = true
-                    EntityConfig.OnChase() -- Gọi callback đuổi
-                    
-                    -- Dừng di chuyển theo node
                     isReboundingPaused = true
                     
-                    -- Đợi ChaseDelay trước khi thực sự lao vào đuổi
+                    -- Gọi callback bắt đầu đuổi
+                    EntityConfig.OnChase()
+                    
+                    -- Đợi ChaseDelay trước khi bắt đầu đuổi
                     task.wait(EntityConfig.ChaseDelay or 1.5)
                     
+                    -- Bắt đầu vòng lặp Chase
                     chaseConnection = RunService.RenderStepped:Connect(function(dt)
                         if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then 
                             despawnEntity()
@@ -567,10 +569,11 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
                             end
                         end
                         
+                        -- Nếu player vào tủ, dừng Chase và quay lại đi Node
                         if isSafeInLocker then
                             isChasing = false
+                            isReboundingPaused = false
                             if chaseConnection then chaseConnection:Disconnect() end
-                            isReboundingPaused = false -- Cho phép quay lại logic đi node
                             return
                         end
                         
@@ -584,38 +587,10 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
                         if distanceToPlayer <= EntityConfig.ChaseHitbox then
                             if chaseConnection then chaseConnection:Disconnect() end
                             
-                            EntityConfig.OnCatched() 
+                            -- Callback khi tóm được lúc đang Chase
+                            EntityConfig.OnCatched()
                             
-                            local damageRemote = ReplicatedStorage:FindFirstChild("LocalDamage", true) or ReplicatedStorage:FindFirstChild("ChangeHealth", true)
-                            if damageRemote then
-                                local finalDamage = (EntityConfig.InstantKill) and 999 or EntityConfig.DamageAmount
-                                damageRemote:FireServer(finalDamage, "ChaseKill", 1, nil)
-                            end
-                            
-                            despawnEntity()
-                        end
-                    end)
-
-                    EntityConfig.OnChase() -- Gọi callback đuổi
-                    
-                    -- Chuyển sang chế độ đuổi theo
-                    chaseConnection = RunService.RenderStepped:Connect(function(dt)
-                        if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then 
-                            despawnEntity()
-                            return 
-                        end
-                        
-                        local targetHrp = Player.Character.HumanoidRootPart
-                        local dir = (targetHrp.Position - rootPart.Position).Unit
-                        
-                        -- Di chuyển mượt tới người chơi
-                        rootPart.CFrame = rootPart.CFrame + (dir * EntityConfig.ChaseSpeed * dt)
-                        
-                        -- Kiểm tra va chạm để kết thúc
-                        if (targetHrp.Position - rootPart.Position).Magnitude < 5 then
-                            if chaseConnection then chaseConnection:Disconnect() end
-                            
-                            -- Gây sát thương cuối
+                            -- Gây sát thương kết liễu
                             local damageRemote = ReplicatedStorage:FindFirstChild("LocalDamage", true) or ReplicatedStorage:FindFirstChild("ChangeHealth", true)
                             if damageRemote then
                                 local finalDamage = (EntityConfig.InstantKill) and 999 or EntityConfig.DamageAmount
@@ -642,11 +617,12 @@ hitboxConnection = RunService.Heartbeat:Connect(function()
                         end)
                     end
                 else
+                    -- Jumpscare thông thường
                     executeJumpscare()
                 end
             end
-        end
-    end
+            end
+            end
 end)
 
 local function getSignalConnections(signal)
