@@ -191,7 +191,7 @@ repeat
 until MainSound.IsLoaded
 
 local ThemeDuration = MainSound.TimePosition
-Maínound.PlaybackSpeed = 5
+MainSound.PlaybackSpeed = 5
 
 print("Harbinger Theme Current Time:", ThemeDuration)
 
