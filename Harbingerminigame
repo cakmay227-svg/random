@@ -44,6 +44,51 @@ function CustomGitSound(soundlink, volume, filename, soundName, parent, looped)
     return sound
 end
 
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+
+local cc = Lighting:FindFirstChild("MainColorCorrection")
+
+if not cc then
+    cc = Instance.new("ColorCorrectionEffect")
+    cc.Name = "MainColorCorrection"
+    cc.Parent = Lighting
+end
+
+
+-- Bật môi trường đỏ
+local function SetRedEnvironment()
+    TweenService:Create(
+        cc,
+        TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {
+            TintColor = Color3.fromRGB(255, 45, 45),
+            Contrast = 0.35,
+            Saturation = -0.2
+        }
+    ):Play()
+end
+
+
+-- Trả về bình thường
+local function ResetEnvironment()
+    TweenService:Create(
+        cc,
+        TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        {
+            TintColor = Color3.fromRGB(255,255,255),
+            Contrast = 0,
+            Saturation = 0
+        }
+    ):Play()
+end
+
+
+-- dùng:
+
+-- muốn reset:
+-- ResetEnvironment()
+
 local objects = game:GetObjects(ASSET_ID)
 if #objects == 0 then
 	warn("Không load được asset!")
@@ -138,19 +183,16 @@ function CustomGitSound(soundlink, volume, filename, soundName, parent, looped)
     return sound
 end
 
-local ThemeUrl = "https://github.com/cakmay227-svg/random/raw/refs/heads/main/YTDown.com_YouTube_Death-Angel-OST-Roblox-Pressure_Media_hoph9xz1JSs_001_1080p.mp3?raw=true"
-local ThemeFile = "DeathAngel"
+local MainSound = workspace:WaitForChild("HarbingerTheme")
 
-pcall(function()
-    CustomGitSound(
-        ThemeUrl,
-        2,
-        ThemeFile,
-        "HarbingerTheme",
-        workspace,
-        false
-    )
-end)
+-- đợi sound sẵn sàng
+repeat
+	task.wait()
+until MainSound.IsLoaded
+
+local ThemeDuration = MainSound.TimePosition
+
+print("Harbinger Theme Current Time:", ThemeDuration)
 
 local PushSounds = {
 	{
@@ -390,22 +432,24 @@ local PressureShake = true
 local PressureBlackout = true
 local CameraShakeConnection
 local BlackoutConnection
-local MainSound = workspace:WaitForChild("HarbingerTheme")
 local BlackFrame
 local ActiveShaker
 local PushForce = Vector2.new(0,0)
 local lastDirection = nil
 
 task.spawn(function()
-	task.wait(30)
+
+	local phaseTime = ThemeDuration / 4
+
+	task.wait(phaseTime)
 
 	if Frozen then return end
 
 	DeathspotActive = true
 	deathspot.Visible = true
 
-	-- Phase 3
-	task.wait(30)
+
+	task.wait(phaseTime)
 
 	if Frozen then return end
 
@@ -414,26 +458,27 @@ task.spawn(function()
 	FillTime = 3
 	DrainTime = 7
 
-	-- Phase 4
-	task.wait(30)
+
+	task.wait(phaseTime)
 
 	if Frozen then return end
 
 	Phase4Active = true
 
 	TweenService:Create(
-	middle,
-	TweenInfo.new(0.5, Enum.EasingStyle.Quad),
-	{
-		Size = UDim2.new(
-			0.119999997,0,
-			0.346907109,0
-		)
-	}
-):Play()
+		middle,
+		TweenInfo.new(0.5, Enum.EasingStyle.Quad),
+		{
+			Size = UDim2.new(
+				0.119999997,0,
+							0.346907109,0
+			)
+		}
+	):Play()
 
-FillTime = 2
+	FillTime = 2
 	DrainTime = 7
+
 end)
 
 local RunService = game:GetService("RunService")
@@ -1076,6 +1121,8 @@ MainSound.Ended:Connect(function()
             t:Play()
         end
     end
+    
+    ResetEnvironment()
 
     task.wait(3)
     Controls:Enable()
