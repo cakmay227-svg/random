@@ -1332,35 +1332,7 @@ end)
 			PlayRandomPushSound()
 
 			-- Effect 2: camera giật
-			PlayShockWave()
-
-			-- Effect 3: circle phóng to rồi nhỏ lại
-			local oldSize = circle.Size
-			TweenService:Create(
-				circle,
-				TweenInfo.new(0.08),
-				{
-					Size = oldSize + UDim2.fromOffset(18,18)
-				}
-			):Play()
-
-			task.delay(0.08,function()
-				TweenService:Create(
-					circle,
-					TweenInfo.new(0.1),
-					{
-						Size = oldSize
-					}
-				):Play()
-			end)
-
-			-- Effect 4: flash trắng
-			middle.ImageColor3 = Color3.new(1,1,1)
-			task.delay(0.05,function()
-				middle.ImageColor3 = Color3.fromRGB(255,0,0)
-			end)
-
-			-- Effect 5: rung UI
+			PlayShockWave() 
 		end
 	end
 end)
