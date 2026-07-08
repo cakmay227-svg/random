@@ -365,6 +365,8 @@ end
 local DeathspotActive = false
 local Phase3Active = false
 local Phase4Active = false
+local Phase5Active = false
+local deathspot2
 
 if not circle then
 	warn("Không tìm thấy ImageLabel 'circle'")
@@ -394,7 +396,7 @@ local PushForce = Vector2.new(0,0)
 local lastDirection = nil
 
 task.spawn(function()
-task.wait(30)
+task.wait(10)
 
 if Frozen then return end  
 
@@ -402,7 +404,7 @@ DeathspotActive = true
 deathspot.Visible = true  
 
 -- Phase 3  
-task.wait(30)  
+task.wait(15)  
 
 if Frozen then return end  
 
@@ -412,7 +414,7 @@ FillTime = 3
 DrainTime = 7  
 
 -- Phase 4  
-task.wait(30)  
+task.wait(20)  
 
 if Frozen then return end  
 
@@ -432,6 +434,19 @@ TweenInfo.new(0.5, Enum.EasingStyle.Quad),
 
 FillTime = 2
 DrainTime = 7
+
+-- Phase 5
+task.wait(25)
+
+if Frozen then return end
+
+Phase5Active = true
+
+deathspot2 = deathspot:Clone()
+deathspot2.Name = "deathspot2"
+deathspot2.Position = deathspot.Position -- spawn ngay vị trí deathspot 1
+deathspot2.Visible = true
+deathspot2.Parent = deathspot.Parent
 end)
 
 local RunService = game:GetService("RunService")
@@ -809,10 +824,21 @@ RunService.RenderStepped:Connect(function(dt)
 	local InDeathspot = false
 
 if DeathspotActive and deathspot then
-	local deathCenter = deathspot.AbsolutePosition + deathspot.AbsoluteSize/2
-	local deathRadius = math.min(deathspot.AbsoluteSize.X,deathspot.AbsoluteSize.Y)/2
+    local center = deathspot.AbsolutePosition + deathspot.AbsoluteSize/2
+    local radius = math.min(deathspot.AbsoluteSize.X, deathspot.AbsoluteSize.Y)/2
 
-	InDeathspot = (circleCenter-deathCenter).Magnitude <= deathRadius
+    if (circleCenter-center).Magnitude <= radius then
+        InDeathspot = true
+    end
+end
+
+if Phase5Active and deathspot2 then
+    local center = deathspot2.AbsolutePosition + deathspot2.AbsoluteSize/2
+    local radius = math.min(deathspot2.AbsoluteSize.X, deathspot2.AbsoluteSize.Y)/2
+
+    if (circleCenter-center).Magnitude <= radius then
+        InDeathspot = true
+    end
 end
 
 	if InDeathspot then
@@ -946,6 +972,43 @@ task.spawn(function()
 end
 end)
 
+local function MoveDeathspot(spot)
+    if not spot then return end
+
+    local radius = 220
+
+    local angle = math.rad(math.random(0,359))
+    local dist = math.random(30,radius)
+
+    local offset = Vector2.new(
+        math.cos(angle)*dist,
+        math.sin(angle)*dist
+    )
+
+    local targetPos = middle.Position + UDim2.fromOffset(offset.X, offset.Y)
+
+    local currentPos = Vector2.new(
+        spot.Position.X.Offset,
+        spot.Position.Y.Offset
+    )
+
+    local newPos = Vector2.new(
+        targetPos.X.Offset,
+        targetPos.Y.Offset
+    )
+
+    local distance = (newPos-currentPos).Magnitude
+    local speed = 250
+
+    TweenService:Create(
+        spot,
+        TweenInfo.new(distance/speed, Enum.EasingStyle.Linear),
+        {
+            Position = targetPos
+        }
+    ):Play()
+end
+
 local function MoveMiddle()
 	if not middle or not middle.Parent then
 		return
@@ -963,42 +1026,13 @@ local function MoveMiddle()
 	middle.Position = UDim2.fromOffset(randomX, randomY)
 
 	-- Deathspot chỉ random khi Middle vừa đổi vị trí
-	if DeathspotActive and deathspot then
-		local radius = 120
+	if DeathspotActive then
+    MoveDeathspot(deathspot)
 
-		local angle = math.rad(math.random(0,359))
-		local dist = math.random(30,radius)
-
-		local offset = Vector2.new(
-			math.cos(angle) * dist,
-			math.sin(angle) * dist
-		)
-
-		local targetPos = middle.Position + UDim2.fromOffset(offset.X, offset.Y)
-
-local currentPos = Vector2.new(
-	deathspot.Position.X.Offset,
-	deathspot.Position.Y.Offset
-)
-
-local newPos = Vector2.new(
-	targetPos.X.Offset,
-	targetPos.Y.Offset
-)
-
-local distance = (newPos - currentPos).Magnitude
-local speed = 250 -- pixel/giây
-
-local time = distance / speed
-
-TweenService:Create(
-	deathspot,
-	TweenInfo.new(time, Enum.EasingStyle.Linear),
-	{
-		Position = targetPos
-	}
-):Play()
-	end
+    if Phase5Active then
+        MoveDeathspot(deathspot2)
+    end
+end
 end
 
 local smoothPosition = circle.Position
