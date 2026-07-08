@@ -1,5 +1,3 @@
-print("bla") 
-
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
@@ -1134,6 +1132,8 @@ MainSound.Ended:Connect(function()
     end
     
     print("Before Reset")
+    print(ResetEnvironment)
+print(typeof(ResetEnvironment))
 ResetEnvironment()
 print("After Reset")
 
