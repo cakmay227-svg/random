@@ -438,47 +438,44 @@ local PushForce = Vector2.new(0,0)
 local lastDirection = nil
 
 task.spawn(function()
+task.wait(30)
 
-	local phaseTime = ThemeDuration / 4
+if Frozen then return end  
 
-	task.wait(phaseTime)
+DeathspotActive = true  
+deathspot.Visible = true  
 
-	if Frozen then return end
+-- Phase 3  
+task.wait(30)  
 
-	DeathspotActive = true
-	deathspot.Visible = true
+if Frozen then return end  
 
+Phase3Active = true  
 
-	task.wait(phaseTime)
+FillTime = 3  
+DrainTime = 7  
 
-	if Frozen then return end
+-- Phase 4  
+task.wait(30)  
 
-	Phase3Active = true
+if Frozen then return end  
 
-	FillTime = 3
-	DrainTime = 7
+Phase4Active = true  
 
+TweenService:Create(  
+middle,  
+TweenInfo.new(0.5, Enum.EasingStyle.Quad),  
+{  
+	Size = UDim2.new(  
+		0.119999997,0,  
+		0.346907109,0  
+	)  
+}
 
-	task.wait(phaseTime)
+):Play()
 
-	if Frozen then return end
-
-	Phase4Active = true
-
-	TweenService:Create(
-		middle,
-		TweenInfo.new(0.5, Enum.EasingStyle.Quad),
-		{
-			Size = UDim2.new(
-				0.119999997,0,
-							0.346907109,0
-			)
-		}
-	):Play()
-
-	FillTime = 2
-	DrainTime = 7
-
+FillTime = 2
+DrainTime = 7
 end)
 
 local RunService = game:GetService("RunService")
