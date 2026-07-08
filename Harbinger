@@ -34,7 +34,7 @@ local cc = Lighting:FindFirstChild("MainColorCorrection")
 
 if not cc then
     cc = Instance.new("ColorCorrectionEffect")
-    cc.Name = "MainColorCorrection"
+    cc.Name = "AltColorCorrection"
     cc.Parent = Lighting
 end
 
