@@ -381,7 +381,7 @@ end
 
 local targetPosition = circle.Position
 local pushTarget = nil
-local PlayerFollowSpeed = 25 -- tốc độ khi người chơi điều khiển
+local PlayerFollowSpeed = 50 -- tốc độ khi người chơi điều khiển
 local PushFollowSpeed = 20 -- tốc độ khi Pandemonium đẩy
 local CurrentFollowSpeed = PlayerFollowSpeed
 local shakeTime = 0
