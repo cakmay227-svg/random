@@ -2,6 +2,42 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 
+local LogService = game:GetService("LogService")
+
+print("========== ERROR DETECTOR START ==========")
+
+-- Bắt mọi lỗi được Roblox log
+LogService.MessageOut:Connect(function(message, messageType)
+	if messageType == Enum.MessageType.MessageError then
+		warn("\n========== LUA ERROR ==========")
+		warn(message)
+		warn(debug.traceback())
+		warn("========== END ERROR ==========\n")
+	end
+end)
+
+-- Hàm chạy an toàn
+local function SafeRun(name, func, ...)
+	local args = table.pack(...)
+
+	local ok, result = xpcall(function()
+		return func(table.unpack(args, 1, args.n))
+	end, function(err)
+		warn("\n========== CRASH ==========")
+		warn("Function :", name)
+		warn("Time :", os.clock())
+		warn("Error :", err)
+		warn(debug.traceback())
+		warn("===========================\n")
+	end)
+
+	return ok, result
+end
+
+-- Ví dụ:
+-- SafeRun("DoPush", DoPush)
+-- SafeRun("MoveMiddle", MoveMiddle)
+
 local player = Players.LocalPlayer
 local Ended = false
 local originalMiniGame = player.PlayerGui.Main.PandemoniumMiniGame
@@ -1160,7 +1196,15 @@ print("After Enable")
 end)
 
 local function DoPush()
+	if not circle or not circle.Parent then
+		return
+	end
+
 	local parent = circle.Parent
+	if not parent then
+		return
+	end
+	
 	local parentSize = parent.AbsoluteSize
 	local circleSize = circle.AbsoluteSize
 
@@ -1246,11 +1290,11 @@ task.spawn(function()
 		task.wait(math.random(1.7, 2))
 
 		if math.random(100) <= 40 then
-	DoPush()
+	SafeRun("DoPush", DoPush)
 	task.wait(0.2)
-	DoPush()
+	SafeRun("DoPush", DoPush)
 else
-	DoPush()
+	SafeRun("DoPush", DoPush)
 end
 			
 	end
@@ -1263,7 +1307,7 @@ local lastDirection
 
 		-- 30% tỉ lệ bị đẩy
 		if math.random(100) <= 20 then
-		DoPush()
+		SafeRun("DoPush", DoPush)
 		end
 	end
 end)
