@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local Ended = false
@@ -43,51 +44,6 @@ function CustomGitSound(soundlink, volume, filename, soundName, parent, looped)
 
     return sound
 end
-
-local Lighting = game:GetService("Lighting")
-local TweenService = game:GetService("TweenService")
-
-local cc = Lighting:FindFirstChild("MainColorCorrection")
-
-if not cc then
-    cc = Instance.new("ColorCorrectionEffect")
-    cc.Name = "MainColorCorrection"
-    cc.Parent = Lighting
-end
-
-
--- Bật môi trường đỏ
-local function SetRedEnvironment()
-    TweenService:Create(
-        cc,
-        TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {
-            TintColor = Color3.fromRGB(255, 45, 45),
-            Contrast = 0.35,
-            Saturation = -0.2
-        }
-    ):Play()
-end
-
-
--- Trả về bình thường
-local function ResetEnvironment()
-    TweenService:Create(
-        cc,
-        TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-        {
-            TintColor = Color3.fromRGB(255,255,255),
-            Contrast = 0,
-            Saturation = 0
-        }
-    ):Play()
-end
-
-
--- dùng:
-
--- muốn reset:
--- ResetEnvironment()
 
 local objects = game:GetObjects(ASSET_ID)
 if #objects == 0 then
@@ -1131,11 +1087,19 @@ MainSound.Ended:Connect(function()
         end
     end
     
-    print("Before Reset")
-    print(ResetEnvironment)
-print(typeof(ResetEnvironment))
-ResetEnvironment()
-print("After Reset")
+    local cc = game:GetService("Lighting"):FindFirstChild("AltColorCorrection")
+
+if cc then
+    TweenService:Create(
+        cc,
+        TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        {
+            TintColor = Color3.fromRGB(255, 255, 255),
+            Contrast = 0,
+            Saturation = 0
+        }
+    ):Play()
+end
 
 task.wait(3)
 Controls:Enable()
