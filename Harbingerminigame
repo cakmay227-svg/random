@@ -339,6 +339,8 @@ end)
 -- Chỉ bắt đầu minigame sau khi circle phóng to xong
 task.wait(0.1)
 
+local circle
+
 local middle
 
 local bar
