@@ -339,8 +339,6 @@ end)
 -- Chỉ bắt đầu minigame sau khi circle phóng to xong
 task.wait(0.1)
 
-local circle
-
 local middle
 
 local bar
@@ -752,7 +750,7 @@ local x = math.clamp(
 )
 
     local y = math.clamp(
-        targetPosition.Y.Offset + delta.Y * sensitivity,
+        targetPosition2.Y.Offset + delta.Y * sensitivity,
         -Overflow,
         parentSize.Y - circleSize.Y + Overflow
     )
@@ -1037,6 +1035,13 @@ end
 
 local smoothPosition = circle.Position
 
+local function AddUDim2(u1, u2)
+    return UDim2.new(
+        u1.X.Scale + u2.X.Scale, u1.X.Offset + u2.X.Offset,
+        u1.Y.Scale + u2.Y.Scale, u1.Y.Offset + u2.Y.Offset
+    )
+end
+
 RunService.RenderStepped:Connect(function(dt)
 	if Frozen then
 		return
@@ -1050,14 +1055,10 @@ RunService.RenderStepped:Connect(function(dt)
     PushForce.Y * dt
 )
 
-local function AddUDim2(u1, u2)
-    return UDim2.new(
-        u1.X.Scale + u2.X.Scale, u1.X.Offset + u2.X.Offset,
-        u1.Y.Scale + u2.Y.Scale, u1.Y.Offset + u2.Y.Offset
-    )
-end
+-- Kiểm tra xem circle có tồn tại không và smoothPosition đã được khởi tạo chưa
+if not circle then return end
+if not smoothPosition then smoothPosition = circle.Position end
 
--- Sau đó áp dụng vào logic:
 local goal = pushTarget or targetPosition
 smoothPosition = smoothPosition:Lerp(
     AddUDim2(goal, pushOffset), 
