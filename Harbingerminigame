@@ -931,7 +931,7 @@ task.spawn(function()
             local entityPage = playerGui.Main.AfterDeath.Document.EntityPage
             local imgLabel = entityPage.DeathFrame.Entities.Button.ImageLabel
 
-            imgLabel.Image = "rbxassetid://78666140831420"
+            imgLabel.Image = "rbxassetid://83670738338408"
             imgLabel.ImageColor3 = Color3.fromRGB(255, 255, 255)
 
             entityPage.DeathFrame.EntityName.Text = "HARBINGER"
