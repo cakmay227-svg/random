@@ -1068,9 +1068,9 @@ while true do
 	local parentSize = parent.AbsoluteSize
 	local circleSize = circle.AbsoluteSize
 
-	local Overflow = 50
+	local Overflow = 70
 
-local Extra = 50
+local Extra = 100
 
 local minX = -circleSize.X/2 - Extra
 local maxX = parentSize.X - circleSize.X/2 + Extra
@@ -1218,9 +1218,9 @@ local lastDirection
 	local parentSize = parent.AbsoluteSize
 	local circleSize = circle.AbsoluteSize
 
-	local Overflow = 50
+	local Overflow = 70
 
-local Extra = 50
+local Extra = 100
 
 local minX = -circleSize.X/2 - Extra
 local maxX = parentSize.X - circleSize.X/2 + Extra
