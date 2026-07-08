@@ -1,5 +1,42 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+
+local LogService = game:GetService("LogService")
+
+print("========== ERROR DETECTOR START ==========")
+
+-- Bắt mọi lỗi được Roblox log
+LogService.MessageOut:Connect(function(message, messageType)
+	if messageType == Enum.MessageType.MessageError then
+		warn("\n========== LUA ERROR ==========")
+		warn(message)
+		warn(debug.traceback())
+		warn("========== END ERROR ==========\n")
+	end
+end)
+
+-- Hàm chạy an toàn
+local function SafeRun(name, func, ...)
+	local args = table.pack(...)
+
+	local ok, result = xpcall(function()
+		return func(table.unpack(args, 1, args.n))
+	end, function(err)
+		warn("\n========== CRASH ==========")
+		warn("Function :", name)
+		warn("Time :", os.clock())
+		warn("Error :", err)
+		warn(debug.traceback())
+		warn("===========================\n")
+	end)
+
+	return ok, result
+end
+
+-- Ví dụ:
+-- SafeRun("DoPush", DoPush)
+-- SafeRun("MoveMiddle", MoveMiddle)
 
 local player = Players.LocalPlayer
 local Ended = false
@@ -8,6 +45,7 @@ local originalMiniGame = player.PlayerGui.Main.PandemoniumMiniGame
 local miniGame = originalMiniGame:Clone()
 miniGame.Name = "PandemoniumMiniGameClone"
 miniGame.Parent = player.PlayerGui.Main
+miniGame.Background.Frame.TextLabel.Text = "Good Luck" 
 
 local Players = game:GetService("Players")
 
@@ -15,7 +53,7 @@ local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 
-local ASSET_ID = "rbxassetid://104515394310264"
+local ASSET_ID = "rbxassetid://101293062691113"
 
 task.spawn(function() 
 function GitAud(soundgit, filename)
@@ -137,69 +175,62 @@ function CustomGitSound(soundlink, volume, filename, soundName, parent, looped)
     return sound
 end
 
-local ThemeUrl = "https://github.com/cakmay227-svg/random/raw/refs/heads/main/YTDown.com_YouTube_Death-Angel-OST-Roblox-Pressure_Media_hoph9xz1JSs_001_1080p.mp3?raw=true"
-local ThemeFile = "DeathAngel"
+local MainSound = workspace:WaitForChild("HarbingerTheme")
 
-task.spawn(function()
-    CustomGitSound(
-        ThemeUrl,
-        1.5,
-        ThemeFile,
-        "HarbingerTheme",
-        workspace,
-        false
-    )
-end)
+-- đợi sound sẵn sàng
+repeat
+	task.wait()
+until MainSound.IsLoaded
+
+local ThemeDuration = MainSound.TimePosition
+
+print("Harbinger Theme Current Time:", ThemeDuration)
 
 local PushSounds = {
-	CustomGitSound(
-		"https://github.com/cakmay227-svg/random/raw/refs/heads/main/ch%E1%BA%A3o%20_1.mp3",
-		5,
-		"chao_1",
-		"Push1",
-		workspace,
-		false
-	),
+	{
+		Url = "https://github.com/cakmay227-svg/random/raw/refs/heads/main/ch%E1%BA%A3o%20_1.mp3",
+		File = "chao_1"
+	},
 
-	CustomGitSound(
-		"https://github.com/cakmay227-svg/random/raw/refs/heads/main/ch%E1%BA%A3o%20_2.mp3",
-		5,
-		"chao_2",
-		"Push2",
-		workspace,
-		false
-	),
+	{
+		Url = "https://github.com/cakmay227-svg/random/raw/refs/heads/main/ch%E1%BA%A3o%20_2.mp3",
+		File = "chao_2"
+	},
 
-	CustomGitSound(
-		"https://github.com/cakmay227-svg/random/raw/refs/heads/main/ch%E1%BA%A3o%20_3.mp3",
-		5,
-		"chao_3",
-		"Push3",
-		workspace,
-		false
-	),
+	{
+		Url = "https://github.com/cakmay227-svg/random/raw/refs/heads/main/ch%E1%BA%A3o%20_3.mp3",
+		File = "chao_3"
+	},
 
-	CustomGitSound(
-		"https://github.com/cakmay227-svg/random/raw/refs/heads/main/ch%E1%BA%A3o%20_4.mp3",
-		5,
-		"chao_4",
-		"Push4",
-		workspace,
-		false
-	)
+	{
+		Url = "https://github.com/cakmay227-svg/random/raw/refs/heads/main/ch%E1%BA%A3o%20_4.mp3",
+		File = "chao_4"
+	}
 }
 
--- Không phát lúc preload
-for _, sound in ipairs(PushSounds) do
-	sound:Stop()
-	sound.TimePosition = 0
-end
-
 local function PlayRandomPushSound()
-	local sound = PushSounds[math.random(#PushSounds)]
-	sound:Stop()
-	sound.TimePosition = 0
+
+	local data = PushSounds[math.random(#PushSounds)]
+
+	local sound = Instance.new("Sound")
+
+	sound.SoundId = GitAud(
+		data.Url,
+		data.File .. "_" .. tostring(math.random(100000))
+	)
+
+	sound.Name = "Push_" .. data.File
+	sound.Volume = 4
+	sound.Parent = workspace
+	sound.RollOffMaxDistance = 400
+	sound.RollOffMinDistance = 5
+
 	sound:Play()
+
+	sound.Ended:Connect(function()
+		sound:Destroy()
+	end)
+
 end
 
 miniGame.Visible = true
@@ -322,6 +353,25 @@ if circle then
 	task.wait(1)
 end
 
+task.spawn(function() 
+task.wait(2)
+TweenService:Create(
+    miniGame.Background.Frame.TextLabel,
+    TweenInfo.new(5),
+    {
+        TextTransparency = 1
+    }
+):Play()
+
+TweenService:Create(
+    miniGame.Background.Frame.TopLine,
+    TweenInfo.new(5),
+    {
+        BackgroundTransparency = 1
+    }
+):Play()
+end)
+
 -- Chỉ bắt đầu minigame sau khi circle phóng to xong
 task.wait(0.1)
 
@@ -331,17 +381,28 @@ local middle
 
 local bar
 
-for _, v in ipairs(miniGame:GetDescendants()) do
+local deathspot
+
+for _,v in ipairs(miniGame:GetDescendants()) do
 	if v:IsA("ImageLabel") then
 		if v.Name == "circle" then
 			circle = v
 		elseif v.Name == "middle" then
 			middle = v
+		elseif v.Name == "deathspot" then
+			deathspot = v
+			deathspot.Visible = false
 		end
 	elseif v:IsA("Frame") and v.Name == "Bar" then
 		bar = v
 	end
 end
+
+local DeathspotActive = false
+local Phase3Active = false
+local Phase4Active = false
+local Phase5Active = false
+local deathspot2
 
 if not circle then
 	warn("Không tìm thấy ImageLabel 'circle'")
@@ -350,26 +411,79 @@ end
 
 local targetPosition = circle.Position
 local pushTarget = nil
-local PlayerFollowSpeed = 25 -- tốc độ khi người chơi điều khiển
+local PlayerFollowSpeed = 75 -- tốc độ khi người chơi điều khiển
 local PushFollowSpeed = 20 -- tốc độ khi Pandemonium đẩy
 local CurrentFollowSpeed = PlayerFollowSpeed
 local shakeTime = 0
 local shakeAmount = 5 -- độ rung (pixel)
 local shakeSpeedX = 13
 local shakeSpeedY = 18
-local FillTime = 1.5   -- đầy trong 1.5 giây
-local DrainTime = 2.5    -- cạn trong 3 giây
+local FillTime = 2   -- đầy trong 1.5 giây
+local DrainTime = 4    -- cạn trong 3 giây
 local Frozen = false
 local IsBeingPushed = false
 local PressureShake = true
 local PressureBlackout = true
 local CameraShakeConnection
 local BlackoutConnection
-local MainSound = workspace:WaitForChild("HarbingerTheme")
 local BlackFrame
 local ActiveShaker
 local PushForce = Vector2.new(0,0)
 local lastDirection = nil
+
+task.spawn(function()
+task.wait(10)
+
+if Frozen then return end  
+
+DeathspotActive = true  
+deathspot.Visible = true  
+
+-- Phase 3  
+task.wait(15)  
+
+if Frozen then return end  
+
+Phase3Active = true  
+
+FillTime = 3  
+DrainTime = 7  
+
+-- Phase 4  
+task.wait(20)  
+
+if Frozen then return end  
+
+Phase4Active = true  
+
+TweenService:Create(  
+middle,  
+TweenInfo.new(0.5, Enum.EasingStyle.Quad),  
+{  
+	Size = UDim2.new(  
+		0.119999997,0,  
+		0.346907109,0  
+	)  
+}
+
+):Play()
+
+FillTime = 2
+DrainTime = 7
+
+-- Phase 5
+task.wait(25)
+
+if Frozen then return end
+
+Phase5Active = true
+
+deathspot2 = deathspot:Clone()
+deathspot2.Name = "deathspot2"
+deathspot2.Position = deathspot.Position -- spawn ngay vị trí deathspot 1
+deathspot2.Visible = true
+deathspot2.Parent = deathspot.Parent
+end)
 
 local RunService = game:GetService("RunService")
 
@@ -601,6 +715,52 @@ ActiveShaker = initializeBypassedShaker()
 
 StartPressureEffects()
 
+task.spawn(function()
+
+	while not Frozen do
+
+		if not Phase3Active then
+			task.wait(1)
+			continue
+		end
+
+		task.wait(8)
+
+		if Frozen then
+			break
+		end
+
+		if math.random(100) <= 25 then
+
+			TweenService:Create(
+				middle,
+				TweenInfo.new(0.5),
+				{
+					ImageTransparency = 1
+				}
+			):Play()
+
+			task.wait(5)
+
+			if Frozen then
+				break
+			end
+
+			TweenService:Create(
+				middle,
+				TweenInfo.new(0.5),
+				{
+					ImageTransparency = 0
+				}
+			):Play()
+
+			task.wait(0.5)
+		end
+
+	end
+
+end)
+
 local UserInputService = game:GetService("UserInputService")
 
 if UserInputService.TouchEnabled then
@@ -617,14 +777,18 @@ if UserInputService.TouchEnabled then
 
     local Overflow = 90
 
-    local x = math.clamp(
-        targetPosition.X.Offset + delta.X * sensitivity,
-        -Overflow,
-        parentSize.X - circleSize.X + Overflow
-    )
+    -- Đảm bảo targetPosition có giá trị ngay từ đầu
+local targetPosition2 = circle and circle.Position or UDim2.fromOffset(0, 0)
+
+-- Trong hàm UserInputService, kiểm tra trước khi dùng:
+local x = math.clamp(
+    (targetPosition2 and targetPosition2.X.Offset or 0) + delta.X * sensitivity,
+    -Overflow,
+    parentSize.X - circleSize.X + Overflow
+)
 
     local y = math.clamp(
-        targetPosition.Y.Offset + delta.Y * sensitivity,
+        targetPosition2.Y.Offset + delta.Y * sensitivity,
         -Overflow,
         parentSize.Y - circleSize.Y + Overflow
     )
@@ -692,14 +856,54 @@ RunService.RenderStepped:Connect(function(dt)
 	local radius = math.min(middle.AbsoluteSize.X, middle.AbsoluteSize.Y) / 2
 
 	local inside = (circleCenter - middleCenter).Magnitude <= radius
+	
+	local InDeathspot = false
 
-	if inside then
-		bar.BackgroundColor3 = Color3.fromRGB(255,255,255)
-		currentPercent = math.clamp(currentPercent + dt / FillTime, 0, 1)
-	else
-		bar.BackgroundColor3 = Color3.fromRGB(255,0,0)
-		currentPercent = math.clamp(currentPercent - dt / DrainTime, 0, 1)
-	end
+if DeathspotActive and deathspot then
+    local center = deathspot.AbsolutePosition + deathspot.AbsoluteSize/2
+    local radius = math.min(deathspot.AbsoluteSize.X, deathspot.AbsoluteSize.Y)/2
+
+    if (circleCenter-center).Magnitude <= radius then
+        InDeathspot = true
+    end
+end
+
+if Phase5Active and deathspot2 then
+    local center = deathspot2.AbsolutePosition + deathspot2.AbsoluteSize/2
+    local radius = math.min(deathspot2.AbsoluteSize.X, deathspot2.AbsoluteSize.Y)/2
+
+    if (circleCenter-center).Magnitude <= radius then
+        InDeathspot = true
+    end
+end
+
+	if InDeathspot then
+	bar.BackgroundColor3 = Color3.fromRGB(255,0,0)
+
+	currentPercent = math.clamp(
+		currentPercent - dt/(DrainTime/2),
+		0,
+		1
+	)
+
+elseif inside then
+	bar.BackgroundColor3 = Color3.fromRGB(255,255,255)
+
+	currentPercent = math.clamp(
+		currentPercent + dt/FillTime,
+		0,
+		1
+	)
+
+else
+	bar.BackgroundColor3 = Color3.fromRGB(255,0,0)
+
+	currentPercent = math.clamp(
+		currentPercent - dt/DrainTime,
+		0,
+		1
+	)
+end
 
 	bar.Size = UDim2.new(
 	fullSize.X.Scale * currentPercent,
@@ -764,58 +968,7 @@ if currentPercent <= 0 and not Ended then
 		end
 	end
 
-	local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-
-local player = Players.LocalPlayer
-
-local gui = Instance.new("ScreenGui")
-gui.Name = "Jumpscare"
-gui.IgnoreGuiInset = true
-gui.ResetOnSpawn = false
-gui.DisplayOrder = 999999
-gui.Parent = player.PlayerGui
-
-local bg = Instance.new("Frame")
-bg.Size = UDim2.fromScale(1,1)
-bg.Position = UDim2.fromScale(0,0)
-bg.BackgroundColor3 = Color3.new(0,0,0)
-bg.BorderSizePixel = 0
-bg.Parent = gui
-
-local image = Instance.new("ImageLabel")
-image.BackgroundTransparency = 1
-image.AnchorPoint = Vector2.new(0.5,0.5)
-image.Position = UDim2.fromScale(0.5,0.5)
-image.Size = UDim2.fromOffset(180,180)
-image.Image = "rbxassetid://113218985749659"
-image.Parent = bg
-
 task.spawn(function() 
-CustomGitSound(
-    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/lv_0_20260707211255.mp3?raw=true",
-    1.5,
-    "jumpscare",
-    "jumpscare",
-    workspace,
-    false
-)
-end) 
-
-TweenService:Create(
-    image,
-    TweenInfo.new(
-        0.6,
-        Enum.EasingStyle.Linear,
-        Enum.EasingDirection.Out
-    ),
-    {
-        Size = UDim2.fromOffset(1500, 1500)
-    }
-):Play()
-
-task.spawn(function() 
-task.wait(0.55)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local function killOneShot()
@@ -842,7 +995,7 @@ task.spawn(function()
             local entityPage = playerGui.Main.AfterDeath.Document.EntityPage
             local imgLabel = entityPage.DeathFrame.Entities.Button.ImageLabel
 
-            imgLabel.Image = "rbxassetid://78666140831420"
+            imgLabel.Image = "rbxassetid://83670738338408"
             imgLabel.ImageColor3 = Color3.fromRGB(255, 255, 255)
 
             entityPage.DeathFrame.EntityName.Text = "HARBINGER"
@@ -851,43 +1004,81 @@ task.spawn(function()
     end)
     end) 
 
-task.spawn(function()
-    local basePos = UDim2.fromScale(0.5,0.5)
-    local offset = 8
-    local right = true
-
-    local finish = tick() + 0.6
-
-    while tick() < finish do
-        TweenService:Create(
-            image,
-            TweenInfo.new(
-                0.01,
-                Enum.EasingStyle.Linear,
-                Enum.EasingDirection.Out
-            ),
-            {
-                Position = basePos + UDim2.fromOffset(right and offset or -offset,0)
-            }
-        ):Play()
-
-        right = not right
-        task.wait(0.03)
-    end
-
-    image.Position = basePos
-end)
-
-task.delay(0.7,function()
-image.ImageTransparency = 1
-task.wait(0.4)
-    gui:Destroy()
-end)
 	return
 end
 end)
 
+local function MoveDeathspot(spot)
+    if not spot then return end
+
+    local radius = 220
+
+    local angle = math.rad(math.random(0,359))
+    local dist = math.random(30,radius)
+
+    local offset = Vector2.new(
+        math.cos(angle)*dist,
+        math.sin(angle)*dist
+    )
+
+    local targetPos = middle.Position + UDim2.fromOffset(offset.X, offset.Y)
+
+    local currentPos = Vector2.new(
+        spot.Position.X.Offset,
+        spot.Position.Y.Offset
+    )
+
+    local newPos = Vector2.new(
+        targetPos.X.Offset,
+        targetPos.Y.Offset
+    )
+
+    local distance = (newPos-currentPos).Magnitude
+    local speed = 250
+
+    TweenService:Create(
+        spot,
+        TweenInfo.new(distance/speed, Enum.EasingStyle.Linear),
+        {
+            Position = targetPos
+        }
+    ):Play()
+end
+
+local function MoveMiddle()
+	if not middle or not middle.Parent then
+		return
+	end
+
+	local parent = middle.Parent
+	local parentSize = parent.AbsoluteSize
+	local middleSize = middle.AbsoluteSize
+
+	local padding = 10
+
+	local randomX = math.random(padding, parentSize.X - middleSize.X - padding)
+	local randomY = math.random(padding, parentSize.Y - middleSize.Y - padding)
+
+	middle.Position = UDim2.fromOffset(randomX, randomY)
+
+	-- Deathspot chỉ random khi Middle vừa đổi vị trí
+	if DeathspotActive then
+    MoveDeathspot(deathspot)
+
+    if Phase5Active then
+        MoveDeathspot(deathspot2)
+    end
+end
+end
+
 local smoothPosition = circle.Position
+
+local function AddUDim2(u1, u2)
+    return UDim2.new(
+        u1.X.Scale + u2.X.Scale, u1.X.Offset + u2.X.Offset,
+        u1.Y.Scale + u2.Y.Scale, u1.Y.Offset + u2.Y.Offset
+    )
+end
 
 RunService.RenderStepped:Connect(function(dt)
 	if Frozen then
@@ -902,10 +1093,15 @@ RunService.RenderStepped:Connect(function(dt)
     PushForce.Y * dt
 )
 
-local goal = pushTarget or targetPosition
+-- Kiểm tra xem circle có tồn tại không và smoothPosition đã được khởi tạo chưa
+if not circle then return end
+if not smoothPosition then smoothPosition = circle.Position end
 
+print("pushTarget =", pushTarget)
+print("targetPosition =", targetPosition)
+local goal = pushTarget or targetPosition
 smoothPosition = smoothPosition:Lerp(
-    goal + pushOffset,
+    AddUDim2(goal, pushOffset), 
     alpha
 )
 
@@ -923,387 +1119,197 @@ local oy =
 end)
 
 MainSound.Ended:Connect(function()
-	Frozen = true
+    if Frozen then return end -- Tránh chạy nhiều lần
+    Frozen = true
 
-	if CameraShakeConnection then
-		CameraShakeConnection:Disconnect()
-	end
+    -- 1. Dừng các kết nối hệ thống
+    if CameraShakeConnection then CameraShakeConnection:Disconnect() end
+    if BlackoutConnection then BlackoutConnection:Disconnect() end
+    if BlackGui then BlackGui:Destroy() end
+    
+    if ActiveShaker then
+        ActiveShaker._camShakeInstances = {}
+        RunService:UnbindFromRenderStep(ActiveShaker._renderName)
+        ActiveShaker = nil
+    end
 
-	if BlackoutConnection then
-		BlackoutConnection:Disconnect()
-	end
+    targetPosition = circle.Position
 
-	if BlackGui then
-		BlackGui:Destroy()
-	end
+    -- 2. Thực hiện Fade Out UI
+    task.wait(1)
+    local FadeOutTweens = {}
+    for _, v in ipairs(fadeObjects) do
+        if not v or not v:IsA("Instance") then continue end
+        
+        local goals = {}
+        if v:IsA("CanvasGroup") then goals.GroupTransparency = 1
+        elseif v:IsA("ImageLabel") or v:IsA("ImageButton") then goals.ImageTransparency = 1
+        elseif v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
+            goals.TextTransparency = 1
+            goals.TextStrokeTransparency = 1
+        elseif v:IsA("Frame") then goals.BackgroundTransparency = 1
+        elseif v:IsA("ScrollingFrame") then
+            goals.BackgroundTransparency = 1
+            goals.ScrollBarImageTransparency = 1
+        elseif v:IsA("UIStroke") then goals.Transparency = 1
+        end
 
-	if ActiveShaker then
-		ActiveShaker._camShakeInstances = {}
-		RunService:UnbindFromRenderStep(ActiveShaker._renderName)
-		ActiveShaker = nil
-	end
+        if next(goals) then
+            local t = TweenService:Create(v, TweenInfo.new(3, Enum.EasingStyle.Quad), goals)
+            table.insert(FadeOutTweens, t)
+            t:Play()
+        end
+    end
+    
+    local cc = game:GetService("Lighting"):FindFirstChild("AltColorCorrection")
 
-	targetPosition = circle.Position
-
-	task.wait(1)
-
-			local FadeOutTweens = {}
-
-			for _, v in ipairs(fadeObjects) do
-				local goals = {}
-
-				if v:IsA("CanvasGroup") then
-					goals.GroupTransparency = 1
-
-				elseif v:IsA("ImageLabel") or v:IsA("ImageButton") then
-					goals.ImageTransparency = 1
-
-				elseif v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
-					goals.TextTransparency = 1
-					goals.TextStrokeTransparency = 1
-
-				elseif v:IsA("Frame") then
-					goals.BackgroundTransparency = 1
-
-				elseif v:IsA("ScrollingFrame") then
-					goals.BackgroundTransparency = 1
-					goals.ScrollBarImageTransparency = 1
-
-				elseif v:IsA("UIStroke") then
-					goals.Transparency = 1
-				end
-
-				if next(goals) then
-					local t = TweenService:Create(
-						v,
-						TweenInfo.new(3, Enum.EasingStyle.Quad),
-						goals
-					)
-
-					table.insert(FadeOutTweens, t)
-					t:Play()
-				end
-			end
-
-			task.wait(3)
-			
-			Controls:Enable()
-			
-			if miniGame then
-	miniGame:Destroy()
+if cc then
+    TweenService:Create(
+        cc,
+        TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        {
+            TintColor = Color3.fromRGB(255, 255, 255),
+            Contrast = 0,
+            Saturation = 0
+        }
+    ):Play()
 end
 
-MainSound.Ended:Connect(function()
-	for _, v in ipairs(workspace:GetChildren()) do
-		if v:IsA("Sound") and (
-			v.Name == "HarbingerChecking"
-			or v.Name == "Push1"
-			or v.Name == "Push2"
-			or v.Name == "Push3"
-			or v.Name == "Push4"
-		) then
-			v:Destroy()
-		end
-	end
+task.wait(3)
+Controls:Enable()
+print("After Enable")
+
+    -- 3. Dọn dẹp Workspace
+    if workspace:FindFirstChild("HarbingerChecking") then
+        workspace.HarbingerChecking:Destroy()
+    end
+
+    for _, v in ipairs(workspace:GetChildren()) do
+        if v:IsA("Sound") and (v.Name == "HarbingerTheme" or v.Name:match("Push")) then
+            v:Destroy()
+        end
+    end
+
+    -- 4. Xóa UI sau cùng để tránh lỗi index nil
+    if miniGame then
+        miniGame:Destroy()
+        miniGame = nil
+    end
 end)
 
-workspace.HarbingerChecking:Destroy()
-
-			-- dừng toàn bộ state
-			for _, c in ipairs(miniGame:GetDescendants()) do
-				for _, con in ipairs(getconnections(c.Changed)) do
-					con:Disable()
-				end
-			end
-
-			break
-		end
-
-		task.wait(0.5)
+local function DoPush()
+	if not circle or not circle.Parent then
+		return
 	end
-end)
 
-task.spawn(function() 
-while true do
-	if Frozen then
-		break
+	local parent = circle.Parent
+	if not parent then
+		return
 	end
 	
-	local parent = circle.Parent
 	local parentSize = parent.AbsoluteSize
 	local circleSize = circle.AbsoluteSize
 
-	local Overflow = 50
+	local Extra = 100
 
-local Extra = 50
+	local minX = -circleSize.X/2 - Extra
+	local maxX = parentSize.X - circleSize.X/2 + Extra
 
-local minX = -circleSize.X/2 - Extra
-local maxX = parentSize.X - circleSize.X/2 + Extra
-
-local minY = -circleSize.Y/2 - Extra
-local maxY = parentSize.Y - circleSize.Y/2 + Extra
+	local minY = -circleSize.Y/2 - Extra
+	local maxY = parentSize.Y - circleSize.Y/2 + Extra
 
 	local randomX, randomY
 
-	if middle then
-		local middlePos = middle.AbsolutePosition
-		local middleCenter = middlePos + middle.AbsoluteSize / 2
+	local directions = {1,2,3,4}
 
-		local candidates = {}
-
-for i = 1, 700 do
-	local x = math.random(0, maxX)
-	local y = math.random(0, maxY)
-
-	local center = parent.AbsolutePosition + Vector2.new(
-		x + circleSize.X / 2,
-		y + circleSize.Y / 2
-	)
-
-	local dist = (center - middleCenter).Magnitude
-
-	table.insert(candidates, {
-		x = x,
-		y = y,
-		dist = dist
-	})
-end
-
-table.sort(candidates, function(a, b)
-	return a.dist > b.dist
-end)
-
--- Chọn ngẫu nhiên trong 15 điểm xa nhất
-local edgePadding = 0 -- 0 = chạm mép, tăng lên nếu sợ cắt UI
-
-local localMiddle = middle.AbsolutePosition - parent.AbsolutePosition + middle.AbsoluteSize / 2
-
-local currentX = circle.Position.X.Offset
-local currentY = circle.Position.Y.Offset
-
-local directions = {1,2,3,4}
-
-if lastDirection then
-    table.remove(directions, table.find(directions, lastDirection))
-end
-
-local dir = directions[math.random(#directions)]
-lastDirection = dir
-
-if dir == 1 then
-    -- Trái
-    randomX = minX
-    randomY = math.random(minY, maxY)
-
-elseif dir == 2 then
-    -- Phải
-    randomX = maxX
-    randomY = math.random(minY, maxY)
-
-elseif dir == 3 then
-    -- Lên
-    randomX = math.random(minX, maxX)
-    randomY = minY
-
-else
-    -- Xuống
-    randomX = math.random(minX, maxX)
-    randomY = maxY
-end
-	else
-		randomX = math.random(minX, maxX)
-randomY = math.random(minY, maxY)
+	if lastDirection then
+		table.remove(directions, table.find(directions, lastDirection))
 	end
 
+	local dir = directions[math.random(#directions)]
+	lastDirection = dir
+
+	if dir == 1 then
+		randomX = minX
+		randomY = math.random(minY, maxY)
+
+	elseif dir == 2 then
+		randomX = maxX
+		randomY = math.random(minY, maxY)
+
+	elseif dir == 3 then
+		randomX = math.random(minX, maxX)
+		randomY = minY
+
+	else
+		randomX = math.random(minX, maxX)
+		randomY = maxY
+	end
+
+	MoveMiddle()
+
 	IsBeingPushed = true
+	CurrentFollowSpeed = PushFollowSpeed
 
-CurrentFollowSpeed = PushFollowSpeed
+	local current = Vector2.new(
+		circle.Position.X.Offset,
+		circle.Position.Y.Offset
+	)
 
-local current = Vector2.new(
-    circle.Position.X.Offset,
-    circle.Position.Y.Offset
-)
+	local target = Vector2.new(randomX, randomY)
+	local direction = (target - current).Unit
 
-local target = Vector2.new(randomX, randomY)
+	PushForce = direction * 7000
+	pushTarget = UDim2.fromOffset(randomX, randomY)
 
-local direction = (target - current).Unit
-
-PushForce = direction * 7000
-
-pushTarget = UDim2.fromOffset(randomX, randomY)
-
-task.delay(0.15, function()
-    targetPosition = pushTarget
-    pushTarget = nil
-
-    IsBeingPushed = false
-    CurrentFollowSpeed = PlayerFollowSpeed
-end)
-	
-	task.spawn(function()
+	task.delay(0.15,function()
+		targetPosition = pushTarget
+		pushTarget = nil
+		IsBeingPushed = false
+		CurrentFollowSpeed = PlayerFollowSpeed
+	end)
 
 	PlayRandomPushSound()
-
 	PlayShockWave()
+	
+	task.spawn(function()
+    for i = 1,20 do
+        local power = 1 - i/20
 
+        workspace.CurrentCamera.CFrame *= CFrame.Angles(
+            math.rad(math.random(-10,10) * power),
+            math.rad(math.random(-10,10) * power),
+            0
+        )
+
+        task.wait(0.05)
+    end
 end)
+end
 
 task.spawn(function()
+	while not Frozen do
+		task.wait(math.random(1.7, 2))
 
-	for i = 1,20 do
-    local power = 1 - i/20
-
-    local camera = workspace.CurrentCamera
-
-camera.CFrame *= CFrame.Angles(
-    math.rad(math.random(-10,10) * power),
-    math.rad(math.random(-10,10) * power),
-    0
-)
-
-    task.wait(0.05)
+		if math.random(100) <= 40 then
+	SafeRun("DoPush", DoPush)
+	task.wait(0.2)
+	SafeRun("DoPush", DoPush)
+else
+	SafeRun("DoPush", DoPush)
 end
-
-hitShakeOffset = CFrame.new()
-
+			
+	end
 end)
-
-	task.wait(math.random(15, 30) / 10)
-end
-end) 
 
 task.spawn(function()
 local lastDirection
 	while not Frozen do
-		task.wait(3)
+		task.wait(4)
 
 		-- 30% tỉ lệ bị đẩy
-		if math.random(100) <= 60 then
-		local parent = circle.Parent
-	local parentSize = parent.AbsoluteSize
-	local circleSize = circle.AbsoluteSize
-
-	local Overflow = 50
-
-local Extra = 50
-
-local minX = -circleSize.X/2 - Extra
-local maxX = parentSize.X - circleSize.X/2 + Extra
-
-local minY = -circleSize.Y/2 - Extra
-local maxY = parentSize.Y - circleSize.Y/2 + Extra
-
-	local randomX, randomY
-
-	if middle then
-		local middlePos = middle.AbsolutePosition
-		local middleCenter = middlePos + middle.AbsoluteSize / 2
-
-		local candidates = {}
-
-for i = 1, 700 do
-	local x = math.random(0, maxX)
-	local y = math.random(0, maxY)
-
-	local center = parent.AbsolutePosition + Vector2.new(
-		x + circleSize.X / 2,
-		y + circleSize.Y / 2
-	)
-
-	local dist = (center - middleCenter).Magnitude
-
-	table.insert(candidates, {
-		x = x,
-		y = y,
-		dist = dist
-	})
-end
-
-table.sort(candidates, function(a, b)
-	return a.dist > b.dist
-end)
-
--- Chọn ngẫu nhiên trong 15 điểm xa nhất
-local edgePadding = 0 -- 0 = chạm mép, tăng lên nếu sợ cắt UI
-
-			-- Đẩy 1 lần
-			local edgePadding = 0 -- 0 = chạm mép, tăng lên nếu sợ cắt UI
-
-local localMiddle = middle.AbsolutePosition - parent.AbsolutePosition + middle.AbsoluteSize / 2
-
-local currentX = circle.Position.X.Offset
-local currentY = circle.Position.Y.Offset
-
-local directions = {1,2,3,4}
-
-if lastDirection then
-    table.remove(directions, table.find(directions, lastDirection))
-end
-
-local dir = directions[math.random(#directions)]
-lastDirection = dir
-
-if dir == 1 then
-    -- Trái
-    randomX = minX
-    randomY = math.random(minY, maxY)
-
-elseif dir == 2 then
-    -- Phải
-    randomX = maxX
-    randomY = math.random(minY, maxY)
-
-elseif dir == 3 then
-    -- Lên
-    randomX = math.random(minX, maxX)
-    randomY = minY
-
-else
-    -- Xuống
-    randomX = math.random(minX, maxX)
-    randomY = maxY
-end
-	else
-		randomX = math.random(minX, maxX)
-randomY = math.random(minY, maxY)
-	end
-
-	IsBeingPushed = true
-
-CurrentFollowSpeed = PushFollowSpeed
-
-local current = Vector2.new(
-    circle.Position.X.Offset,
-    circle.Position.Y.Offset
-)
-
-local target = Vector2.new(randomX, randomY)
-
-local direction = (target - current).Unit
-
-PushForce = direction * 7000
-
-pushTarget = UDim2.fromOffset(randomX, randomY)
-
-task.delay(0.15, function()
-    targetPosition = pushTarget
-    pushTarget = nil
-
-    IsBeingPushed = false
-    CurrentFollowSpeed = PlayerFollowSpeed
-end)
-
-			-- Effect 1: phát sound
-			PlayRandomPushSound()
-
-			-- Effect 2: camera giật
-			PlayShockWave()
-
-			-- Effect 3: circle phóng to rồi nhỏ lại
-
-			-- Effect 4: flash trắn
-
-			-- Effect 5: rung UI
+		if math.random(100) <= 20 then
+		SafeRun("DoPush", DoPush)
 		end
 	end
 end)
