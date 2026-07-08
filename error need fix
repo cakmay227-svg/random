@@ -1,7 +1,8 @@
-print("bla") 
+ 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
+local PushBusy = false
 
 local LogService = game:GetService("LogService")
 
@@ -1098,14 +1099,12 @@ RunService.RenderStepped:Connect(function(dt)
 if not circle then return end
 if not smoothPosition then smoothPosition = circle.Position end
 
-if not pushTarget then
-    pushTarget = targetPosition
-end
-
 local goal = pushTarget
 
-print("pushTarget =", pushTarget)
-print("targetPosition =", targetPosition)
+if not goal then
+    return
+end
+
 smoothPosition = smoothPosition:Lerp(
     AddUDim2(goal, pushOffset), 
     alpha
@@ -1204,6 +1203,13 @@ print("After Enable")
 end)
 
 local function DoPush()
+
+    if PushBusy then
+        return
+    end
+
+    PushBusy = true
+    
 	if not circle or not circle.Parent then
 		return
 	end
@@ -1273,6 +1279,7 @@ local function DoPush()
 		pushTarget = nil
 		IsBeingPushed = false
 		CurrentFollowSpeed = PlayerFollowSpeed
+		PushBusy = false
 	end)
 
 	PlayRandomPushSound()
