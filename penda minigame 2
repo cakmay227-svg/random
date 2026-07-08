@@ -401,6 +401,7 @@ local ThemeEndTime = SelectedTheme.StopTime
 local BlackFrame
 local ActiveShaker
 local PushForce = Vector2.new(0,0)
+local lastDirection = nil
 
 local RunService = game:GetService("RunService")
 
@@ -1057,6 +1058,7 @@ workspace.PandemoniumChecking:Destroy()
 	end
 end)
 
+task.spawn(function() 
 while true do
 	if Frozen then
 		break
@@ -1111,26 +1113,35 @@ local edgePadding = 0 -- 0 = chạm mép, tăng lên nếu sợ cắt UI
 
 local localMiddle = middle.AbsolutePosition - parent.AbsolutePosition + middle.AbsoluteSize / 2
 
-local leftDist = localMiddle.X
-local rightDist = parentSize.X - localMiddle.X
-local topDist = localMiddle.Y
-local bottomDist = parentSize.Y - localMiddle.Y
+local currentX = circle.Position.X.Offset
+local currentY = circle.Position.Y.Offset
 
-local biggest = math.max(leftDist, rightDist, topDist, bottomDist)
+local directions = {1,2,3,4}
 
-if biggest == leftDist then
+if lastDirection then
+    table.remove(directions, table.find(directions, lastDirection))
+end
+
+local dir = directions[math.random(#directions)]
+lastDirection = dir
+
+if dir == 1 then
+    -- Trái
     randomX = minX
     randomY = math.random(minY, maxY)
 
-elseif biggest == rightDist then
+elseif dir == 2 then
+    -- Phải
     randomX = maxX
     randomY = math.random(minY, maxY)
 
-elseif biggest == topDist then
+elseif dir == 3 then
+    -- Lên
     randomX = math.random(minX, maxX)
     randomY = minY
 
 else
+    -- Xuống
     randomX = math.random(minX, maxX)
     randomY = maxY
 end
@@ -1194,3 +1205,162 @@ end)
 
 	task.wait(math.random(15, 30) / 10)
 end
+end) 
+
+task.spawn(function()
+local lastDirection
+	while not Frozen do
+		task.wait(5)
+
+		-- 30% tỉ lệ bị đẩy
+		if math.random(100) <= 30 then
+		local parent = circle.Parent
+	local parentSize = parent.AbsoluteSize
+	local circleSize = circle.AbsoluteSize
+
+	local Overflow = 50
+
+local Extra = 50
+
+local minX = -circleSize.X/2 - Extra
+local maxX = parentSize.X - circleSize.X/2 + Extra
+
+local minY = -circleSize.Y/2 - Extra
+local maxY = parentSize.Y - circleSize.Y/2 + Extra
+
+	local randomX, randomY
+
+	if middle then
+		local middlePos = middle.AbsolutePosition
+		local middleCenter = middlePos + middle.AbsoluteSize / 2
+
+		local candidates = {}
+
+for i = 1, 700 do
+	local x = math.random(0, maxX)
+	local y = math.random(0, maxY)
+
+	local center = parent.AbsolutePosition + Vector2.new(
+		x + circleSize.X / 2,
+		y + circleSize.Y / 2
+	)
+
+	local dist = (center - middleCenter).Magnitude
+
+	table.insert(candidates, {
+		x = x,
+		y = y,
+		dist = dist
+	})
+end
+
+table.sort(candidates, function(a, b)
+	return a.dist > b.dist
+end)
+
+-- Chọn ngẫu nhiên trong 15 điểm xa nhất
+local edgePadding = 0 -- 0 = chạm mép, tăng lên nếu sợ cắt UI
+
+			-- Đẩy 1 lần
+			local edgePadding = 0 -- 0 = chạm mép, tăng lên nếu sợ cắt UI
+
+local localMiddle = middle.AbsolutePosition - parent.AbsolutePosition + middle.AbsoluteSize / 2
+
+local currentX = circle.Position.X.Offset
+local currentY = circle.Position.Y.Offset
+
+local directions = {1,2,3,4}
+
+if lastDirection then
+    table.remove(directions, table.find(directions, lastDirection))
+end
+
+local dir = directions[math.random(#directions)]
+lastDirection = dir
+
+if dir == 1 then
+    -- Trái
+    randomX = minX
+    randomY = math.random(minY, maxY)
+
+elseif dir == 2 then
+    -- Phải
+    randomX = maxX
+    randomY = math.random(minY, maxY)
+
+elseif dir == 3 then
+    -- Lên
+    randomX = math.random(minX, maxX)
+    randomY = minY
+
+else
+    -- Xuống
+    randomX = math.random(minX, maxX)
+    randomY = maxY
+end
+	else
+		randomX = math.random(minX, maxX)
+randomY = math.random(minY, maxY)
+	end
+
+	IsBeingPushed = true
+
+CurrentFollowSpeed = PushFollowSpeed
+
+local current = Vector2.new(
+    circle.Position.X.Offset,
+    circle.Position.Y.Offset
+)
+
+local target = Vector2.new(randomX, randomY)
+
+local direction = (target - current).Unit
+
+PushForce = direction * 7000
+
+pushTarget = UDim2.fromOffset(randomX, randomY)
+
+task.delay(0.15, function()
+    targetPosition = pushTarget
+    pushTarget = nil
+
+    IsBeingPushed = false
+    CurrentFollowSpeed = PlayerFollowSpeed
+end)
+
+			-- Effect 1: phát sound
+			PlayRandomPushSound()
+
+			-- Effect 2: camera giật
+			PlayShockWave()
+
+			-- Effect 3: circle phóng to rồi nhỏ lại
+			local oldSize = circle.Size
+			TweenService:Create(
+				circle,
+				TweenInfo.new(0.08),
+				{
+					Size = oldSize + UDim2.fromOffset(18,18)
+				}
+			):Play()
+
+			task.delay(0.08,function()
+				TweenService:Create(
+					circle,
+					TweenInfo.new(0.1),
+					{
+						Size = oldSize
+					}
+				):Play()
+			end)
+
+			-- Effect 4: flash trắng
+			middle.ImageColor3 = Color3.new(1,1,1)
+			task.delay(0.05,function()
+				middle.ImageColor3 = Color3.fromRGB(255,0,0)
+			end)
+
+			-- Effect 5: rung UI
+		end
+	end
+end)
