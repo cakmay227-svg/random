@@ -1,3 +1,5 @@
+print("bla") 
+
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
@@ -771,11 +773,15 @@ if UserInputService.TouchEnabled then
 
     local Overflow = 90
 
-    local x = math.clamp(
-        targetPosition.X.Offset + delta.X * sensitivity,
-        -Overflow,
-        parentSize.X - circleSize.X + Overflow
-    )
+    -- Đảm bảo targetPosition có giá trị ngay từ đầu
+local targetPosition = circle and circle.Position or UDim2.fromOffset(0, 0)
+
+-- Trong hàm UserInputService, kiểm tra trước khi dùng:
+local x = math.clamp(
+    (targetPosition and targetPosition.X.Offset or 0) + delta.X * sensitivity,
+    -Overflow,
+    parentSize.X - circleSize.X + Overflow
+)
 
     local y = math.clamp(
         targetPosition.Y.Offset + delta.Y * sensitivity,
@@ -1057,10 +1063,17 @@ RunService.RenderStepped:Connect(function(dt)
     PushForce.Y * dt
 )
 
-local goal = pushTarget or targetPosition
+local function AddUDim2(u1, u2)
+    return UDim2.new(
+        u1.X.Scale + u2.X.Scale, u1.X.Offset + u2.X.Offset,
+        u1.Y.Scale + u2.Y.Scale, u1.Y.Offset + u2.Y.Offset
+    )
+end
 
+-- Sau đó áp dụng vào logic:
+local goal = pushTarget or targetPosition
 smoothPosition = smoothPosition:Lerp(
-    goal + pushOffset,
+    AddUDim2(goal, pushOffset), 
     alpha
 )
 
