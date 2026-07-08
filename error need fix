@@ -1,3 +1,4 @@
+print("bla") 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
@@ -418,8 +419,8 @@ local shakeTime = 0
 local shakeAmount = 5 -- độ rung (pixel)
 local shakeSpeedX = 13
 local shakeSpeedY = 18
-local FillTime = 2   -- đầy trong 1.5 giây
-local DrainTime = 4    -- cạn trong 3 giây
+local FillTime = 1   -- đầy trong 1.5 giây
+local DrainTime = 1010101001010101001010    -- cạn trong 3 giây
 local Frozen = false
 local IsBeingPushed = false
 local PressureShake = true
@@ -446,8 +447,8 @@ if Frozen then return end
 
 Phase3Active = true  
 
-FillTime = 3  
-DrainTime = 7  
+FillTime = 1  
+DrainTime = 101010100101001  
 
 -- Phase 4  
 task.wait(20)  
@@ -468,8 +469,8 @@ TweenInfo.new(0.5, Enum.EasingStyle.Quad),
 
 ):Play()
 
-FillTime = 2
-DrainTime = 7
+FillTime = 1
+DrainTime = 10101001010101001
 
 -- Phase 5
 task.wait(25)
@@ -1097,9 +1098,14 @@ RunService.RenderStepped:Connect(function(dt)
 if not circle then return end
 if not smoothPosition then smoothPosition = circle.Position end
 
+if not pushTarget then
+    pushTarget = targetPosition
+end
+
+local goal = pushTarget
+
 print("pushTarget =", pushTarget)
 print("targetPosition =", targetPosition)
-local goal = pushTarget or targetPosition
 smoothPosition = smoothPosition:Lerp(
     AddUDim2(goal, pushOffset), 
     alpha
