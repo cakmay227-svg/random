@@ -1,0 +1,720 @@
+local function CacheFile(url, filename)
+	local path = filename
+
+	if not isfile(path) then
+		writefile(path, game:HttpGet(url))
+	end
+
+	return path
+end
+
+local ModelFile = CacheFile(
+	"https://codeberg.org/qjjdjdjjd/cak/raw/branch/main/conmuc.rbxmx",
+	"conmuc.rbxmx"
+)
+
+local SquidSound = CacheFile(
+	"https://codeberg.org/qjjdjdjjd/cak/raw/branch/main/lv_0_20260716201056.mp3?raw=true",
+	"squid.mp3"
+)
+
+local JumpSound = CacheFile(
+	"https://codeberg.org/qjjdjdjjd/cak/raw/branch/main/lv_0_20260716211736%20%281%29.mp3?raw=true",
+	"squidJUMP.mp3"
+)
+
+local Buffer = buffer.fromstring(readfile(ModelFile))
+
+local Models = game:GetService("SerializationService")
+	:DeserializeInstancesAsync(Buffer)
+
+local LPlayer = game:GetService("Players").LocalPlayer
+local Char = LPlayer.Character or LPlayer.CharacterAdded:Wait()
+local HRP = Char:WaitForChild("HumanoidRootPart")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local Faces = {
+"rbxassetid://82653689787228",
+"rbxassetid://120888783501712",
+"rbxassetid://109738467064673",
+"rbxassetid://106959066145108",
+"rbxassetid://75584720496935",
+"rbxassetid://80641118962569", 
+"rbxassetid://136411701389670", 
+"rbxassetid://77865963821148", 
+"rbxassetid://81591177876627", 
+"rbxassetid://86117879508678", 
+"rbxassetid://79710649274728", 
+"rbxassetid://74346428032023", 
+"rbxassetid://125895862360055", 
+"rbxassetid://100487799735571", 
+"rbxassetid://75334672652058", 
+"rbxassetid://96389615638497", 
+"rbxassetid://108585784007139", 
+"rbxassetid://74387716579572", 
+"rbxassetid://102927463173449", 
+"rbxassetid://88738854131260", 
+"rbxassetid://135282385815267", 
+"rbxassetid://121727692130589", 
+"rbxassetid://114238223804219", 
+"rbxassetid://75909629577988", 
+"rbxassetid://128728824524762", 
+"rbxassetid://110308988824210", 
+"rbxassetid://117320854743675", 
+"rbxassetid://108621070339765"
+}
+
+function GitAud(filename)
+	return (getcustomasset or getsynasset)(filename)
+end
+
+function CustomGitSound(filename, volume, _, soundName, parent, looped)
+	local sound = Instance.new("Sound")
+
+	sound.SoundId = GitAud(filename)
+	sound.Parent = parent or workspace
+	sound.Volume = volume or 1
+	sound.PlaybackSpeed = 0.9
+	sound.Name = soundName or "bgtheme"
+	sound.Looped = looped or false
+
+	local sfx = Instance.new("DistortionSoundEffect")
+	sfx.Parent = sound
+
+	return sound
+end
+
+local Log = ""
+
+local function Add(Text)
+Log ..= Text .. "\n"
+end
+
+local function GetSquiddleCount()
+	local Count = 0
+
+	for _,v in ipairs(workspace:GetChildren()) do
+		if v:GetAttribute("IsSquiddle") then
+			Count += 1
+		end
+	end
+
+	return Count
+end
+
+for _, Obj in ipairs(Models) do
+    if not Obj:IsA("Model") then
+        continue
+    end
+
+    Obj.Parent = workspace
+    Obj:SetAttribute("IsSquiddle", true)
+    Obj:ScaleTo(1.5)
+
+local Active = false
+local Destroying = false
+local SpawnTime = tick()
+local Connections = {}
+
+CustomGitSound(
+	"squid.mp3",
+	1.2,
+	nil,
+	"squid",
+	Obj,
+	true
+)
+
+CustomGitSound(
+	"squidJUMP.mp3",
+	1.2,
+	nil,
+	"SUMSCARE",
+	Obj,
+	false
+)
+
+local Anim = game:GetService("ReplicatedStorage").Animations.Squiddles.Idle  
+  
+local Controller = Obj:FindFirstChildOfClass("AnimationController")
+
+local Animator
+
+if Controller then
+Animator = Controller:FindFirstChildOfClass("Animator")
+
+if not Animator then  
+	Animator = Instance.new("Animator")  
+	Animator.Parent = Controller  
+end  
+
+local Track = Animator:LoadAnimation(Anim)  
+Track.Looped = true  
+Track:Play()
+
+end
+
+local RadiusMin = 15
+local RadiusMax = 20
+
+local Angle = math.rad(math.random(0, 359))
+local Radius = math.random(RadiusMin, RadiusMax)
+
+local Offset = Vector3.new(
+	math.cos(Angle) * Radius,
+	3.5,
+	math.sin(Angle) * Radius
+)
+
+local Pos = HRP.Position + Offset
+
+local WallDistance = 7
+
+local Params = RaycastParams.new()
+Params.FilterType = Enum.RaycastFilterType.Blacklist
+Params.FilterDescendantsInstances = {Obj, Char}
+
+for _,Dir in ipairs({
+	Vector3.xAxis,
+	-Vector3.xAxis,
+	Vector3.zAxis,
+	-Vector3.zAxis
+}) do
+	local Result = workspace:Raycast(Pos, Dir * WallDistance, Params)
+
+	if Result then
+		local Dist = (Result.Position - Pos).Magnitude
+		Pos -= Dir * (WallDistance - Dist)
+	end
+end
+
+if Obj:IsA("Model") then
+	Obj:PivotTo(CFrame.lookAt(Pos, HRP.Position))
+elseif Obj:IsA("BasePart") then
+	Obj.CFrame = CFrame.lookAt(Pos, HRP.Position)
+end
+
+for _,v in ipairs(Obj:GetDescendants()) do
+	if v:IsA("BasePart") then
+		v.Transparency = 1
+	end
+end
+
+local FadeInfo = TweenInfo.new(3)
+
+for _,v in ipairs(Obj:GetDescendants()) do
+	if v:IsA("BasePart") then
+		TweenService:Create(v, FadeInfo, {
+			Transparency = 0
+		}):Play()
+	end
+end
+
+task.delay(3,function()
+	if Obj.Parent then
+		Active = true
+	end
+end)
+
+local Body = Obj:FindFirstChild("Body", true)  
+
+if Body then  
+	local Face = Body:FindFirstChild("Face")  
+
+	if Face and Face:IsA("Motor6D") and Face.Part1 then  
+		local Part = Face.Part1  
+
+		if #Faces > 0 then  
+local Pick = Faces[math.random(#Faces)]
+
+local Gui = Instance.new("SurfaceGui")
+Gui.Name = "FaceGui"
+Gui.Face = Enum.NormalId.Front
+Gui.AlwaysOnTop = true
+Gui.LightInfluence = 0
+Gui.Parent = Part
+
+local Img = Instance.new("ImageLabel")
+Img.Name = "FaceImage"
+Img.BackgroundTransparency = 1
+Img.Size = UDim2.fromScale(1, 1)
+Img.Image = Pick
+Img.ImageColor3 = Color3.fromRGB(255, 0, 0)
+Img.ImageTransparency = 1
+Img.Position = UDim2.fromScale(0, 0.15)
+Img.Parent = Gui
+
+local Show = false
+local NearStart
+local Jumpscare = false
+local Done = false
+local IdleStart
+local FadeTween
+local MoveTween
+
+local Tentacles = {}
+
+for _, v in ipairs(Obj:GetDescendants()) do
+if v:IsA("BasePart") and v.Name:match("^Tentacle%d+$") then
+Tentacles[#Tentacles + 1] = v
+end
+end
+
+local TentacleTweens = {}
+
+local function TweenTentacles(Color)
+for _, Tween in ipairs(TentacleTweens) do
+Tween:Cancel()
+end
+
+table.clear(TentacleTweens)  
+
+for _, Part in ipairs(Tentacles) do  
+	local Tween = TweenService:Create(  
+		Part,  
+		TweenInfo.new(0.3),  
+		{  
+			Color = Color  
+		}  
+	)  
+
+	TentacleTweens[#TentacleTweens + 1] = Tween  
+	Tween:Play()  
+end
+
+end
+
+local NormalPos = UDim2.fromScale(0, 0)
+local DownPos = UDim2.fromScale(0, 0.15)
+
+local function Fade(In)
+if FadeTween then
+FadeTween:Cancel()
+end
+
+if MoveTween then  
+	MoveTween:Cancel()  
+end  
+
+if In then  
+	Img.Position = DownPos  
+
+	FadeTween = TweenService:Create(  
+		Img,  
+		TweenInfo.new(0.3),  
+		{  
+			ImageTransparency = 0  
+		}  
+	)  
+
+	MoveTween = TweenService:Create(  
+		Img,  
+		TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),  
+		{  
+			Position = NormalPos  
+		}  
+	)  
+else  
+	Img.Position = NormalPos  
+
+	FadeTween = TweenService:Create(  
+		Img,  
+		TweenInfo.new(0.3),  
+		{  
+			ImageTransparency = 1  
+		}  
+	)  
+
+	MoveTween = TweenService:Create(  
+		Img,  
+		TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In),  
+		{  
+			Position = DownPos  
+		}  
+	)  
+end  
+
+FadeTween:Play()  
+MoveTween:Play()
+
+end
+
+local DetectDist = 10
+local DetectTime = 3
+
+local function HasEnabledEmitter(Model)
+if not Model then
+return false
+end
+
+for _, v in ipairs(Model:GetDescendants()) do  
+	if v:IsA("ParticleEmitter") and v.Enabled then  
+		return true  
+	end  
+end  
+
+return false
+
+end
+
+local function LookingAtObj()
+local Cam = workspace.CurrentCamera
+
+local Dir = (Part.Position - Cam.CFrame.Position).Unit  
+local Dot = Cam.CFrame.LookVector:Dot(Dir)  
+
+return Dot >= 0.97
+
+end
+
+local function DestroyModel()
+	if Destroying then
+		return
+	end
+
+	Destroying = true
+	Done = true
+	Jumpscare = true
+
+	if FadeTween then
+		FadeTween:Cancel()
+	end
+
+	if MoveTween then
+		MoveTween:Cancel()
+	end
+
+	for _,Tween in ipairs(TentacleTweens) do
+		Tween:Cancel()
+	end
+
+	if Obj:FindFirstChild("squid") then
+		Obj.squid:Stop()
+	end
+
+	for _,v in ipairs(Connections) do
+		v:Disconnect()
+	end
+
+	local FadeInfo = TweenInfo.new(3)
+
+	for _,v in ipairs(Obj:GetDescendants()) do
+		if v:IsA("BasePart") then
+			TweenService:Create(v,FadeInfo,{
+				Transparency = 1
+			}):Play()
+		end
+	end
+
+	task.delay(3,function()
+		if Obj then
+			Obj:Destroy()
+		end
+	end)
+end
+
+Connections[#Connections+1] =
+RunService.RenderStepped:Connect(function()
+if not Active or Destroying then
+	return
+end
+
+if Jumpscare or Done then
+	return
+end
+
+if not HRP or not Part then
+return
+end
+
+if not Show then
+	if GetSquiddleCount() >= 4 then
+		IdleStart = IdleStart or tick()
+
+		if tick() - IdleStart >= 30 then
+			DestroyModel()
+			return
+		end
+	else
+		IdleStart = nil
+	end
+else
+	IdleStart = nil
+end
+
+local Dist = (HRP.Position - Part.Position).Magnitude  
+  
+DetectDist = 10
+
+DetectTime = 3
+
+local Lantern = Char:FindFirstChild("Lantern")
+if Lantern and HasEnabledEmitter(Lantern) then
+DetectDist = 23
+DetectTime = 1
+end
+
+local Flashlight = Char:FindFirstChild("Flashlight")
+if Flashlight and HasEnabledEmitter(Flashlight) and LookingAtObj() then
+DetectDist = 33
+DetectTime = 1
+end
+
+if Jumpscare then  
+return
+
+end
+
+if Dist <= DetectDist then
+if not Show then
+Show = true
+NearStart = tick()
+
+Fade(true)  
+	TweenTentacles(Color3.fromRGB(255,0,0))
+
+if Obj:FindFirstChild("squid") then
+Obj.squid.Playing = true
+Obj.squid:Play()
+end
+elseif NearStart and tick() - NearStart >= DetectTime then
+	Jumpscare = true
+	Done = true
+	
+Jumpscare = true
+
+local Cam = workspace.CurrentCamera
+local Root = Obj.PrimaryPart or Part
+
+if Root then
+local Dist = (HRP.Position - Root.Position).Magnitude
+
+if Dist > 3 then  
+	local Look = (HRP.Position - Root.Position).Unit  
+	local TargetPos = HRP.Position - Look * 2.8  
+
+	local Tween = TweenService:Create(  
+		Root,  
+		TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),  
+		{  
+			CFrame = CFrame.new(TargetPos, HRP.Position)  
+		}  
+	)  
+
+	Tween:Play()  
+end  
+
+local Pivot = Obj:GetPivot()  
+local Pos = Pivot.Position  
+
+local CamY = workspace.CurrentCamera.CFrame.LookVector.Y
+
+local YOffset = 0.8 + math.clamp(CamY * 8, -2, 5)
+
+Obj:PivotTo(
+CFrame.new(
+Pos.X,
+Char.Head.Position.Y + YOffset,
+Pos.Z
+) * (Pivot - Pivot.Position)
+)
+end
+
+Obj.SUMSCARE:Play()
+
+Obj.SUMSCARE.Ended:Once(function()  
+if Obj then  
+	Obj:Destroy()  
+end
+
+end)
+
+if Obj:FindFirstChild("squid") then  
+			Obj.squid:Stop()  
+			Obj.squid:Destroy()  
+		end  
+
+	local Head = Char:FindFirstChild("Head")
+
+local JumpAnim = game:GetService("ReplicatedStorage").Animations.Squiddles.Jumpscare
+local Track = Animator:LoadAnimation(JumpAnim)
+Track.Looped = false
+Track:Play()
+
+local Follow
+Follow = RunService.RenderStepped:Connect(function()
+
+if not Obj.Parent or not HRP or not Head then
+return
+end
+
+local Pivot = Obj:GetPivot()  
+local Pos = Pivot.Position  
+
+Obj:PivotTo(CFrame.new(  
+	Pos.X,  
+	Head.Position.Y + 0.8,  
+	Pos.Z  
+) * (Pivot - Pivot.Position))
+
+end)
+
+Track.Stopped:Once(function()
+if Follow then
+Follow:Disconnect()
+end
+
+local Main = LPlayer.PlayerGui:FindFirstChild("Main")  
+
+if Main then  
+	local Jump = Main:FindFirstChild("SquiddleJumpscare")  
+	local Border = Main:FindFirstChild("SquiddleBorder")  
+
+	if Jump and Border then  
+		local JumpClone = Jump:Clone()  
+		local BorderClone = Border:Clone()  
+
+		JumpClone.Parent = Main  
+		BorderClone.Parent = Main  
+
+		JumpClone.Visible = true  
+		BorderClone.Visible = true  
+
+		JumpClone.BackgroundTransparency = 0  
+		JumpClone.BackgroundColor3 = Color3.fromRGB(255,0,0)
+		JumpClone.ImageTransparency = 0  
+		JumpClone.ScaleType = Enum.ScaleType.Fit  
+		BorderClone.ImageTransparency = 0  
+
+		JumpClone.Image = Pick  
+		JumpClone.ImageColor3 = Color3.new(0, 0, 0)  
+
+		task.delay(0.8, function()  
+local function TweenObj(Obj)  
+	local Goal = {}  
+
+	if Obj:IsA("ImageLabel") or Obj:IsA("ImageButton") then  
+		Goal.ImageTransparency = 1  
+	end  
+
+	if Obj:IsA("GuiObject") then  
+		Goal.BackgroundTransparency = 1  
+	end  
+
+	if next(Goal) then  
+		TweenService:Create(  
+			Obj,  
+			TweenInfo.new(3),  
+			Goal  
+		):Play()  
+	end  
+end  
+
+TweenObj(JumpClone)  
+  
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local function killOneShot()
+local damageRemote = ReplicatedStorage:FindFirstChild("LocalDamage", true) or ReplicatedStorage:FindFirstChild("ChangeHealth", true)
+
+if damageRemote and damageRemote:IsA("RemoteEvent") then  
+    damageRemote:FireServer(50, "SittingItOut", 1, nil)  
+    damageRemote:FireServer("Damage", 50)  
+    print("ngol")  
+else  
+    print("đéo được")  
+end
+
+end
+
+task.spawn(function()
+killOneShot()
+end)
+
+for _, v in ipairs(JumpClone:GetDescendants()) do  
+	TweenObj(v)  
+end
+
+end)
+
+task.delay(1.8, function()
+local function TweenObj(Obj)
+local Goal = {}
+
+if Obj:IsA("ImageLabel") or Obj:IsA("ImageButton") then  
+		Goal.ImageTransparency = 1  
+	end  
+
+	if Obj:IsA("GuiObject") then  
+		Goal.BackgroundTransparency = 1  
+	end  
+
+	if next(Goal) then  
+		TweenService:Create(  
+			Obj,  
+			TweenInfo.new(3),  
+			Goal  
+		):Play()  
+	end  
+end  
+
+TweenObj(BorderClone)  
+
+for _, v in ipairs(BorderClone:GetDescendants()) do  
+	TweenObj(v)  
+end
+
+end)
+
+task.delay(4.8, function()
+JumpClone:Destroy()
+BorderClone:Destroy()
+end)
+end
+end
+
+for _, v in ipairs(Obj:GetDescendants()) do  
+if v:IsA("BasePart") then  
+	v.Transparency = 1  
+elseif v:IsA("SurfaceGui") then  
+	v:Destroy()  
+end
+
+end
+
+Show = false  
+NearStart = nil  
+
+end)
+end
+else
+NearStart = nil
+
+if Show then  
+	Show = false  
+
+	Fade(false)  
+	TweenTentacles(Color3.new(0,0,0))
+
+if Obj:FindFirstChild("squid") then
+Obj.squid.Playing = false
+Obj.squid:Stop()
+end
+end
+end
+end)
+end
+
+Add("Children:")  
+		for _, v in ipairs(Part:GetChildren()) do  
+			Add(v.ClassName.." "..v.Name)  
+		end  
+	else  
+		Add("Không tìm thấy Motor6D Face hoặc Part1")  
+	end  
+else  
+	Add("Không tìm thấy Body")  
+end
+
+end
