@@ -1,4 +1,4 @@
--- ENTITYk SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)  
+-- ENTITY SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)  
 -- =====================================================================  
 local ReplicatedStorage = game:GetService("ReplicatedStorage")  
 local TweenService = game:GetService("TweenService")  
@@ -16,6 +16,7 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")  
 local FlickerEnabled = false  
 local entityReady = false  
+local buildFullPath
   
 local Remotes = ReplicatedStorage:WaitForChild("Events")  
 local URSpecialEffects = Remotes:WaitForChild("URSpecialEffects")  
@@ -1301,7 +1302,7 @@ end
 	end
 end
   
-local function buildFullPath()  
+buildFullPath = function()  
 local roomsList = getOrderedRooms()  
   
 if EntityConfig.RoomLimits and SpawnRoom then  
