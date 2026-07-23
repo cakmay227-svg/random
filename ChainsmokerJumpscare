@@ -1,0 +1,241 @@
+local Players = game:GetService("Players")
+
+local Player = Players.LocalPlayer
+
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "BlackScreen"
+Gui.IgnoreGuiInset = true
+Gui.ResetOnSpawn = false
+Gui.DisplayOrder = 999999999
+Gui.Parent = Player.PlayerGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.fromScale(1, 1)
+Frame.Position = UDim2.fromScale(0, 0)
+Frame.BackgroundColor3 = Color3.new(0, 0, 0)
+Frame.BorderSizePixel = 0
+Frame.Parent = Gui
+
+task.wait(1)
+
+Gui:Destroy()
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Player = Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local HRP = Character:WaitForChild("HumanoidRootPart")
+
+local Assets = ReplicatedStorage:FindFirstChild("Assets", true)
+if not Assets then
+	return
+end
+
+local Area = Assets:FindFirstChild("ChainSmokerArea", true)
+if not Area or not Area:IsA("Model") then
+	return
+end
+
+local function killOneShot()
+    local damageRemote = ReplicatedStorage:FindFirstChild("LocalDamage", true) or ReplicatedStorage:FindFirstChild("ChangeHealth", true)
+    
+    if damageRemote and damageRemote:IsA("RemoteEvent") then
+        damageRemote:FireServer(100, "SittingItOut", 1, nil)
+        damageRemote:FireServer("Damage", 100)
+        print("ngol")
+    else
+        print("đéo được")
+    end
+end
+
+function GitAud(soundgit, filename)
+    local file = filename..".mp3"
+    
+    if not isfile(file) then
+        writefile(file, game:HttpGet(soundgit))
+    end
+
+    local asset = (getcustomasset or getsynasset)(file)
+
+    return asset
+end
+
+function CustomGitSound(soundlink, volume, filename, soundName, parent, looped)
+    local sound = Instance.new("Sound")
+
+    sound.SoundId = GitAud(soundlink, filename)
+    sound.Parent = parent or workspace
+    sound.Volume = volume or 1
+    sound.RollOffMaxDistance = 400
+    sound.RollOffMinDistance = 5
+    sound.PlaybackSpeed = 1
+    sound.Name = soundName or "bgtheme"
+    sound.Looped = looped or false
+
+    return sound
+end
+
+task.spawn(function() 
+CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/XRecorder_Edited_20260723_01.mp3?raw=true",
+    1.5,
+    "CHJDJ",
+    "CHAINSMOKERAM",
+    workspace,
+    true
+)
+end) 
+
+workspace.CHAINSMOKERAM:Play()
+
+task.spawn(function() 
+CustomGitSound(
+    "https://github.com/cakmay227-svg/random/raw/refs/heads/main/XRecorder_Edited_20260723_02.mp3?raw=true",
+    2,
+    "hxjxjkjsj",
+    "CHESTOPEN",
+    workspace,
+    false
+)
+end) 
+
+local AnimationTriggered = false
+local CooldownCancelled = false
+
+task.spawn(function()
+	task.wait(20)
+
+	if CooldownCancelled or AnimationTriggered then
+		return
+	end
+
+	killOneShot()
+
+	local ChestOpen = workspace:FindFirstChild("CHESTOPEN")
+	if ChestOpen then
+		ChestOpen:Destroy()
+	end
+
+	local Theme = workspace:FindFirstChild("CHAINSMOKERAM")
+	if Theme then
+		Theme:Destroy()
+	end
+end)
+
+local Clone = Area:Clone()
+Clone.Parent = workspace
+
+local Pivot = Clone:GetPivot()
+Clone:PivotTo(CFrame.new(HRP.Position + Vector3.new(10000, 0, 0)) * (Pivot - Pivot.Position))
+
+local TeleportPart = Clone:FindFirstChild("TeleportPart", true)
+if TeleportPart and TeleportPart:IsA("BasePart") then
+	Character:PivotTo(TeleportPart.CFrame)
+end
+
+local ParanoiaChest = Clone:FindFirstChild("ParanoiaChest", true)
+
+if ParanoiaChest then
+	local LowerChest = ParanoiaChest:FindFirstChild("LowerChest")
+	local Root = LowerChest and LowerChest:FindFirstChild("Root")
+
+	if Root then
+		local RootClone = Root:Clone()
+
+RootClone.Name = "Rootclone" 
+		RootClone.CFrame = Root.CFrame
+		RootClone.Anchored = true
+		RootClone.Transparency = 1
+		RootClone.Parent = LowerChest
+
+		Root.Transparency = 0
+		Root.CanCollide = false
+		Root.CanQuery = false
+		Root.CanTouch = false
+	end
+end
+
+local Chest = Clone:FindFirstChild("ParanoiaChest", true)
+if Chest then
+local RootPart = Instance.new("Part")
+RootPart.Name = "HumanoidRootPart"
+RootPart.Size = Vector3.new(2, 2, 1)
+RootPart.Transparency = 1
+RootPart.CanCollide = false
+RootPart.CanQuery = false
+RootPart.CanTouch = false
+RootPart.Anchored = true
+RootPart.CFrame = Chest:GetPivot()
+RootPart.Parent = Chest
+
+task.spawn(function()  
+	while RootPart.Parent and Character.Parent do  
+		if (HRP.Position - RootPart.Position).Magnitude <= 150 then  
+		local Chest = Clone:FindFirstChild("ParanoiaChest", true)
+
+local UpperChest = Chest and Chest:FindFirstChild("UpperChest", true)
+
+if UpperChest then
+local Cog = UpperChest:FindFirstChild("Cog1", true)
+
+if Cog then  
+	local Config = {  
+Height = -32,  
+Backward = 25,  
+Rotation = Vector3.new(35, 0, 0),  
+Time = 2
+
+}
+
+AnimationTriggered = true
+CooldownCancelled = true
+
+workspace.CHESTOPEN:Play()
+			
+			workspace.CHESTOPEN.Ended:Connect(function() 
+			workspace.CHESTOPEN:Destroy()
+			end)
+			
+			task.spawn(function() 
+			task.wait(0.6)
+			workspace.CHAINSMOKERAM:Destroy()
+			killOneShot()
+			end) 
+
+local Start = Cog.CFrame
+local Goal =
+Start
+* CFrame.new(0, Config.Height, -Config.Backward)
+* CFrame.Angles(
+math.rad(Config.Rotation.X),
+math.rad(Config.Rotation.Y),
+math.rad(Config.Rotation.Z)
+)
+
+local Duration = Config.Time
+local t0 = tick()
+
+repeat
+local Alpha = math.clamp((tick() - t0) / Duration, 0, 1)
+
+-- EaseOutCubic  
+Alpha = 1 - (1 - Alpha)^3  
+
+Cog.CFrame = Start:Lerp(Goal, Alpha)  
+
+task.wait()
+
+until Alpha >= 1
+
+Cog.CFrame = Goal
+end
+end
+
+break  
+		end  
+		task.wait(0.1)  
+	end  
+end)
+
+end
