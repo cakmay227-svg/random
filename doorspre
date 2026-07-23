@@ -1,4 +1,4 @@
--- ENTITY SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)  
+-- ENTITYk SYSTEM (SPAWNER TEMPLATE VÀ CƠ CHẾ DỪNG HITBOX TỦ)  
 -- =====================================================================  
 local ReplicatedStorage = game:GetService("ReplicatedStorage")  
 local TweenService = game:GetService("TweenService")  
