@@ -1088,7 +1088,26 @@ end
     reboundLock = true
     reboundsDone += 1
 
-    isFinalRebound = reboundsDone >= totalRebounds
+    if reboundsDone >= totalRebounds then
+        isFinalRebound = true
+        ReboundStopExit = nil
+    end
+    
+    if isFinalRebound then
+    local newPath = buildFullPath()
+
+    if #newPath > 0 then
+        currentPath = newPath
+
+        for i, node in ipairs(currentPath) do
+            if node == currentNode then
+                currentIndex = i
+                break
+            end
+        end
+    end
+end
+
             print(">>> Rebound thành công lần thứ:", reboundsDone, "/", totalRebounds)    
                 
             -- Tạm dừng di chuyển trong thời gian delay rebound    
