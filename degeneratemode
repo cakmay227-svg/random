@@ -1,5 +1,27 @@
+local function CachedLoad(url, name)
+	local path = name .. ".lua"
+
+	local source
+
+	if isfile(path) then
+		source = readfile(path)
+	else
+		source = game:HttpGet(url)
+		writefile(path, source)
+	end
+
+	local func = loadstring(source)
+
+	if func then
+		return func()
+	end
+end
+
 -- Loading Ui
-loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Loading%20Ui"))()
+CachedLoad(
+	"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Loading%20Ui",
+	"LoadingUI"
+)
 wait(1)
 local mainGameModule = game.Players.LocalPlayer.PlayerGui
     :WaitForChild("MainUI", 10)
@@ -176,169 +198,132 @@ end)
 end)()
 
 -- Intro
-loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Intro"))()
+CachedLoad(
+	"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Intro",
+	"Introjdjjdxj"
+)
 
 -- Stunner
 coroutine.wrap(function()
-    while true do
-        wait(35)
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Stunner"))()
-    end
+	while true do
+		wait(35)
+		CachedLoad(
+			"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Stunner",
+			"Stunner"
+		)
+	end
 end)()
+
 
 -- Blinker
 coroutine.wrap(function()
-    while true do
-        wait(165)
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Blinker"))()
-    end
+	while true do
+		wait(165)
+		CachedLoad(
+			"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Blinker",
+			"Blinker"
+		)
+	end
 end)()
 
--- Subtlety
-coroutine.wrap(function()
-    while true do
-        wait(125)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0) loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Subtlety"))()
-    end
-end)()
 
--- Itemmer
-coroutine.wrap(function()
-    while true do
-        wait(150)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0) loadstring(game:HttpGet("https://raw.githubusercontent.com/Guestly-V2-2/Doors/refs/heads/main/Semi-Gambler"))()
-    end
-end)()
+local function RoomLoad(delay, url, name)
+	coroutine.wrap(function()
+		while true do
+			wait(delay)
+			game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
+			wait()
 
--- Looper
-coroutine.wrap(function()
-    while true do
-        wait(300)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0) loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Looper"))()
-    end
-end)()
+			CachedLoad(url, name)
+		end
+	end)()
+end
 
--- Coersion
-coroutine.wrap(function()
-    while true do
-        wait(440)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0) loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Coersion"))()
-    end
-end)()
 
--- Forcibly
-coroutine.wrap(function()
-    while true do
-        wait(650)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0) loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Forcibly"))()
-    end
-end)()
+RoomLoad(125,
+	"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Subtlety",
+	"Subtlety"
+)
 
--- Grief
-coroutine.wrap(function()
-    while true do
-        wait(790)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0) loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Grief"))()
-    end
-end)()
+RoomLoad(150,
+	"https://raw.githubusercontent.com/Guestly-V2-2/Doors/refs/heads/main/Semi-Gambler",
+	"Itemmer"
+)
 
--- Gambler
-coroutine.wrap(function()
-    while true do
-        wait(290)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0) loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Gambler"))()
-    end
-end)()
+RoomLoad(300,
+	"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Looper",
+	"Looper"
+)
 
--- Fugitive
-coroutine.wrap(function()
-    while true do
-        wait(897)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0) loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Fugitive"))()
-    end
-end)()
+RoomLoad(440,
+	"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Coersion",
+	"Coersion"
+)
 
--- Reflector
-coroutine.wrap(function()
-    while true do
-        wait(1120)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0) loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Reflector"))()
-    end
-end)()
+RoomLoad(650,
+	"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Forcibly",
+	"Forcibly"
+)
 
--- Phonker
-coroutine.wrap(function()
-    while true do
-        wait(450)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0) loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Phonker"))()
-    end
-end)()
+RoomLoad(790,
+	"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Grief",
+	"Grief"
+)
 
--- Obstructioner
-coroutine.wrap(function()
-    while true do
-        wait(160)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0) loadstring(game:HttpGet("https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Obstructioner"))()
-    end
-end)()
+RoomLoad(290,
+	"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Gambler",
+	"Gambler"
+)
 
--- Goofier
-coroutine.wrap(function()
-    while true do
-        wait(130)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0) loadstring(game:HttpGet("https://raw.githubusercontent.com/Guestly-V2-2/Doors/refs/heads/main/Goofier"))()
-    end
-end)()
+RoomLoad(897,
+	"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Fugitive",
+	"Fugitive"
+)
+
+RoomLoad(1120,
+	"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Reflector",
+	"Reflector"
+)
+
+RoomLoad(450,
+	"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Phonker",
+	"Phonker"
+)
+
+RoomLoad(160,
+	"https://raw.githubusercontent.com/DoorsHubs/Tutorial/refs/heads/main/Obstructioner",
+	"Obstructioner"
+)
+
+RoomLoad(130,
+	"https://raw.githubusercontent.com/Guestly-V2-2/Doors/refs/heads/main/Goofier",
+	"Goofier"
+)
+
+RoomLoad(330,
+	"https://raw.githubusercontent.com/Guestly-V2-2/Doors/refs/heads/main/Tricker",
+	"Tricker"
+)
+
+RoomLoad(315,
+	"https://raw.githubusercontent.com/Guestly-V2-2/Doors/refs/heads/main/Healer",
+	"Healer"
+)
+
+RoomLoad(233,
+	"https://raw.githubusercontent.com/cakmay227-svg/random/refs/heads/main/lier",
+	"Lier"
+)
+
 
 -- Watcher
 coroutine.wrap(function()
-    while true do
-        wait(230)
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/Guestly-V2-2/Doors/refs/heads/main/Watcher"))()
-    end
-end)()
+	while true do
+		wait(230)
 
--- Tricker
-coroutine.wrap(function()
-    while true do
-        wait(330)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0) loadstring(game:HttpGet("https://raw.githubusercontent.com/Guestly-V2-2/Doors/refs/heads/main/Tricker"))()
-    end
-end)()
-
--- Healer
-coroutine.wrap(function()
-    while true do
-        wait(315)
-       
-game.ReplicatedStorage.GameData.LatestRoom.Changed:Wait()
-        wait(0)
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Guestly-V2-2/Doors/refs/heads/main/Healer"))()
-    end
+		CachedLoad(
+			"https://raw.githubusercontent.com/Guestly-V2-2/Doors/refs/heads/main/Watcher",
+			"Watcher"
+		)
+	end
 end)()
