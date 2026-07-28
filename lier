@@ -1,0 +1,254 @@
+
+-- ts file was generated at discord.gg/25ms
+
+local SoundCache = {}
+
+function GitAud(url, filename)
+	local path = filename .. ".mp3"
+
+	if SoundCache[path] then
+		return SoundCache[path]
+	end
+
+	if not isfile(path) then
+		writefile(path, game:HttpGet(url))
+	end
+
+	local asset = (getcustomasset or getsynasset)(path)
+
+	SoundCache[path] = asset
+
+	return asset
+end
+
+function CustomGitSound(url, _, filename)
+	local sound = Instance.new("Sound")
+
+	sound.SoundId = GitAud(url, filename)
+	sound.Parent = workspace
+	sound.Name = "Fcvvvbh"
+	sound.PlaybackSpeed = 1
+	sound.Volume = 3
+
+	sound:Play()
+
+	return sound
+end
+
+CustomGitSound(
+	"https://github.com/cakmay227-svg/random/raw/refs/heads/main/video_to_mp3_0724_1448%20(1).mp3",
+	1,
+	"tfffvvg"
+)
+
+game.Lighting.MainColorCorrection.TintColor = Color3.fromRGB(162, 255,142)
+game.Lighting.MainColorCorrection.Contrast = 10
+
+game:GetService('TweenService'):Create(game.Lighting.MainColorCorrection, TweenInfo.new(2.5), {Contrast = 0}):Play()
+game:GetService('TweenService'):Create(game.Lighting.MainColorCorrection, TweenInfo.new(5), {
+TintColor = Color3.fromRGB(255, 255, 255),
+}):Play()
+
+local _LocalPlayer = game.Players.LocalPlayer
+local u7 = _LocalPlayer.Character or _LocalPlayer.CharacterAdded:Wait()
+local _ = workspace.CurrentCamera
+local u8 = true
+
+game:GetService('TweenService')
+
+local model = game:GetObjects("rbxassetid://113652131287587")[1]
+
+local function getPath(inst)
+	local path = {}
+	while inst do
+		table.insert(path, 1, inst.Name)
+		inst = inst.Parent
+	end
+	return table.concat(path, ".")
+end
+
+local targetHue, targetSat = Color3.fromRGB(190, 255, 173):ToHSV()
+
+for _, inst in ipairs(model:GetDescendants()) do
+	print(("[%s] %s"):format(inst.ClassName, getPath(inst)))
+
+	if inst:IsA("BasePart") then
+		local _, _, v = inst.Color:ToHSV()
+		inst.Color = Color3.fromHSV(targetHue, targetSat, v)
+
+	elseif inst:IsA("ParticleEmitter") then
+		local isDepthEmitter =
+			inst.Name == "ParticleEmitter"
+			and inst.Parent
+			and inst.Parent.Name == "Attachment"
+			and inst.Parent.Parent
+			and inst.Parent.Parent.Name == "Depth"
+			and inst.Parent.Parent.Parent == model
+
+		if isDepthEmitter then
+			inst.Texture = "rbxassetid://124060873827863"
+		else
+			local keypoints = {}
+
+			for _, kp in ipairs(inst.Color.Keypoints) do
+				local _, _, v = kp.Value:ToHSV()
+
+				keypoints[#keypoints + 1] = ColorSequenceKeypoint.new(
+					kp.Time,
+					Color3.fromHSV(targetHue, targetSat, v)
+				)
+			end
+
+			inst.Color = ColorSequence.new(keypoints)
+		end
+
+	elseif inst:IsA("PointLight")
+		or inst:IsA("SpotLight")
+		or inst:IsA("SurfaceLight") then
+
+		local _, _, v = inst.Color:ToHSV()
+		inst.Color = Color3.fromHSV(targetHue, targetSat, v)
+
+	elseif inst:IsA("ImageLabel")
+		or inst:IsA("ImageButton") then
+
+		local _, _, v = inst.ImageColor3:ToHSV()
+		inst.ImageColor3 = Color3.fromHSV(targetHue, targetSat, v)
+
+	elseif inst:IsA("Decal")
+		or inst:IsA("Texture") then
+
+		local _, _, v = inst.Color3:ToHSV()
+		inst.Color3 = Color3.fromHSV(targetHue, targetSat, v)
+	end
+end
+
+local v9 = model
+
+v9.Parent = workspace
+v9.Name = 'Lier'
+v9:FindFirstChildWhichIsA('BasePart').CFrame = workspace.CurrentRooms:FindFirstChild(game.ReplicatedStorage.GameData.LatestRoom.Value):WaitForChild('RoomEntrance').CFrame * CFrame.new(math.random(-5, 5), 0, -15)
+
+wait(3)
+
+local Player = game.Players.LocalPlayer
+local MainUI = Player.PlayerGui.MainUI
+local Caption = MainUI.MainFrame.Caption
+local MainGame = require(MainUI.Initiator.Main_Game)
+
+local function ShowCaption(text, color)
+	Caption.TextColor3 = color
+
+	repeat
+		task.wait()
+	until not Caption.Visible
+
+	MainGame.caption(text, true)
+end
+
+CustomGitSound('https://github.com/cakmay227-svg/random/raw/refs/heads/main/sam%20(13).mp3?raw=true', 1, ' 55____))')
+
+game.Players.LocalPlayer:WaitForChild('PlayerGui').MainUI.MainFrame.Caption.TextColor3 = Color3.fromRGB(255, 3, 251)
+
+ShowCaption("Hide in 5 seconds!", Color3.fromRGB(255,3,251))
+task.wait(3)
+
+for i = 5, 1, -1 do
+	ShowCaption(tostring(i), Color3.fromRGB(255,3,251)) 
+	task.wait(1)
+end
+
+if not u7:GetAttribute('Hiding') and u8 == true then
+CustomGitSound('https://github.com/cakmay227-svg/random/raw/refs/heads/main/sam%20(16).mp3?raw=true', 1, ' LierVoiceline2')
+ShowCaption("Oh you survived!", Color3.fromRGB(255,3,251))
+else
+CustomGitSound('https://github.com/cakmay227-svg/random/raw/refs/heads/main/sam%20(15).mp3?raw=true', 1, ' LierVoiceline3')
+ShowCaption("LOL HOW DID YOU FALL FOR THAT? HAHA! ", Color3.fromRGB(255,3,251))
+
+task.wait(3)
+
+task.spawn(function()
+    while true do
+        repeat
+            wait(0, 5)
+        until u8 == true
+
+        game.Players.LocalPlayer.Character.Humanoid:TakeDamage(100)  
+    firesignal(game.ReplicatedStorage.RemotesFolder.DeathHint.OnClientEvent, {  
+        'You died to who you call Lier...',  
+        'When he appears, dont trust what he says',  
+        'I believe in you!',  
+    }, 'Blue')  
+
+    game.ReplicatedStorage.GameStats['Player_' .. game.Players.LocalPlayer.Name].Total.DeathCause.Value = 'Lier'  
+    end
+end)
+end
+wait(5)
+
+game.Lighting.MainColorCorrection.TintColor = Color3.fromRGB(0, 0, 0)
+game.Lighting.MainColorCorrection.Contrast = 10
+
+game:GetService('TweenService'):Create(game.Lighting.MainColorCorrection, TweenInfo.new(2.5), {Contrast = 0}):Play()
+wait(1)
+game:GetService('TweenService'):Create(game.Lighting.MainColorCorrection, TweenInfo.new(5), {
+TintColor = Color3.fromRGB(255, 255, 255),
+}):Play()
+
+local _Sound4 = Instance.new('Sound')
+
+_Sound4.Parent = game.Workspace
+_Sound4.Name = 'Spawn'
+_Sound4.SoundId = 'rbxassetid://7053083974'
+_Sound4.Volume = 5
+_Sound4.PlaybackSpeed = 1
+
+_Sound4:Play()
+v9:Destroy()
+
+u8 = false
+
+wait(3)
+
+local _Sound5 = Instance.new('Sound')
+
+_Sound5.Parent = game.Workspace
+_Sound5.Name = 'Spawn'
+_Sound5.SoundId = 'rbxassetid://1201103772'
+_Sound5.Volume = 1
+_Sound5.PlaybackSpeed = 1.5
+
+_Sound5:Play()
+
+game.Lighting.MainColorCorrection.TintColor = Color3.fromRGB(255, 107, 8)
+game.Lighting.MainColorCorrection.Contrast = 10
+
+game:GetService('TweenService'):Create(game.Lighting.MainColorCorrection, TweenInfo.new(2.5), {Contrast = 0}):Play()
+game:GetService('TweenService'):Create(game.Lighting.MainColorCorrection, TweenInfo.new(5), {
+TintColor = Color3.fromRGB(255, 255, 255),
+}):Play()
+
+game.Players.LocalPlayer:WaitForChild('PlayerGui').MainUI.MainFrame.Caption.TextColor3 = Color3.fromRGB(3, 255, 11)
+
+require(game.Players.LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game).caption('Toxicity: +30%', true)
+task.wait(0)
+
+if _G.stats and _G.stats.Value then
+	_G.stats.Value += 30
+end
+
+if getgenv()._LIER_ALREADY_EXECUTED then
+    return
+end
+
+getgenv()._LIER_ALREADY_EXECUTED = true
+
+local achievementGiver = loadstring(game:HttpGet("https://raw.githubusercontent.com/Voor-Pr00/Achivements/refs/heads/main/Voorpr0"))()
+
+---====== Display achievement ======---
+achievementGiver({
+    Title = "Lying People",
+    Desc = "Lol get fooled",
+    Reason = "Encountered Lier",
+    Image = "rbxassetid://120610145830618"
+})
